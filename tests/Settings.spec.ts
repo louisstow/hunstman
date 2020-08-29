@@ -1,5 +1,4 @@
 import { Settings } from "../src/Settings";
-import fs from "fs";
 
 jest.mock("fs");
 
@@ -20,9 +19,8 @@ test("Global settings", () => {
 });
 
 test("Reading config file", () => {
-  fs.readFileSync = jest.fn().mockReturnValue(`{"LOCALFILE": 99}`);
   const s = new Settings();
-  s.loadConfig();
+  s.loadConfig("myfile");
 
   expect(s.get("LOCALFILE")).toBe(99);
 });

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": "./",
-    "rootDir": "../"
+    "rootDir": "../",
     // "outDir": "./dist",
     // "target": "es5",
     // "module": "commonjs",
@@ -9,7 +9,7 @@
     // "allowJs": true,
     // "strict": true,
     // "noImplicitAny": true,
-    // "esModuleInterop": false,
+    "esModuleInterop": true
     // "resolveJsonModule": true,
     // "skipLibCheck": true,
     // "forceConsistentCasingInFileNames": true
