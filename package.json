@@ -4,6 +4,7 @@
   "description": "An unobtrusive library for scraping",
   "main": "index.js",
   "scripts": {
+    "build": "tsc --build src",
     "test": "jest"
   },
   "author": "Louis Stowasser",

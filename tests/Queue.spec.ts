@@ -1,5 +1,3 @@
-import "jest";
-
 import { Queue } from "../src/Queue";
 import { Request } from "../src/Request";
 
