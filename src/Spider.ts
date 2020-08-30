@@ -23,6 +23,7 @@ enum SpiderEvents {
 }
 
 const DEFAULT_MAX_REQUESTS = 50;
+const DEFAULT_TIMEOUT = 10000;
 
 type Requestable = Queue | Request | Array<Request>;
 type Resolver = (value: Response[]) => void;
@@ -64,6 +65,12 @@ class Spider extends EventEmitter {
     this.middleware = [];
     this.results = [];
     this.resolver = null;
+
+    // global middleware from settings
+    if (this.settings.get("middleware", false)) {
+      const middleware = this.settings.get("middleware", []) as Middleware[];
+      middleware.forEach((m) => this.addMiddleware(m));
+    }
   }
 
   addMiddleware(middleware: Middleware) {
@@ -154,8 +161,10 @@ class Spider extends EventEmitter {
           return passes;
         })
         .catch((err) => {
+          if (item.request.response) {
+            this.results[item.index] = item.request.response;
+          }
           this.emit(SpiderEvents.ERROR, err, item);
-          this.results[item.index] = err as Response;
         })
         .then(() => {
           this.emit(SpiderEvents.REQUEST_DONE, item);
@@ -204,9 +213,15 @@ class Spider extends EventEmitter {
       throw new Error("Queue is empty");
     }
 
+    // initialize the proxy settings on the requests
     if (this.settings.get("proxy", false)) {
-      const proxy = this.settings.get("proxy");
-      this.queue.queue.forEach((item) => item.request.setProxy(proxy));
+      const proxy = this.settings.get("proxy") as string;
+      const timeout = this.settings.get("timeout", DEFAULT_TIMEOUT) as number;
+
+      this.queue.queue.forEach((item) => {
+        item.request.setProxy(proxy);
+        item.request.setTimeout(timeout);
+      });
     }
 
     this.state = SpiderState.CRAWLING;

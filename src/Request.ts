@@ -1,6 +1,8 @@
 import axios, { CancelTokenSource, AxiosProxyConfig } from "axios";
 import { Response } from "./Response";
 
+import ProxyAgent from "proxy-agent";
+
 const CancelToken = axios.CancelToken;
 
 enum RequestState {
@@ -23,7 +25,8 @@ class Request {
   state: RequestState;
   cancelToken: CancelTokenSource;
   response: Response | null;
-  proxy: AxiosProxyConfig | false = false;
+  proxy: string | false = false;
+  timeout: number = 0;
 
   startTime: number | null;
   endTime: number | null;
@@ -57,8 +60,12 @@ class Request {
     this.headers[key] = value;
   }
 
-  setProxy(proxy: AxiosProxyConfig) {
+  setProxy(proxy: string) {
     this.proxy = proxy;
+  }
+
+  setTimeout(ms: number) {
+    this.timeout = ms;
   }
 
   cancel() {
@@ -82,6 +89,11 @@ class Request {
     this.state = RequestState.REQUESTING;
     this.startTime = Date.now();
 
+    let httpAgent: any = undefined;
+    if (this.proxy) {
+      httpAgent = new ProxyAgent(this.proxy);
+    }
+
     return new Promise((resolve, reject) => {
       axios({
         url: this.url,
@@ -90,7 +102,9 @@ class Request {
         headers: this.headers,
         responseType: "text",
         cancelToken: this.cancelToken.token,
-        proxy: this.proxy,
+        timeout: this.timeout,
+        httpsAgent: httpAgent,
+        httpAgent: httpAgent,
       })
         .then((resp) => {
           this.state = RequestState.COMPLETED;
@@ -110,15 +124,18 @@ class Request {
           this.state = RequestState.FAILED;
           this.endTime = Date.now();
 
-          const r = new Response(
-            err.response.status,
-            err.response.statusText,
-            err.response.headers,
-            err.response.data
-          );
+          if (err.response) {
+            const r = new Response(
+              err.response.status,
+              err.response.statusText,
+              err.response.headers,
+              err.response.data
+            );
 
-          this.response = r;
-          reject(r);
+            this.response = r;
+          }
+
+          reject(err);
         });
     });
   }

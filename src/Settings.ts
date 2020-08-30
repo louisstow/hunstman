@@ -6,9 +6,13 @@ type SettingsKeyVal = { [k: string]: any };
 declare global {
   namespace NodeJS {
     interface Global {
-      HUNSTMAN_SETTINGS?: SettingsKeyVal;
+      HUNSTMAN_SETTINGS: SettingsKeyVal;
     }
   }
+}
+
+if (!global.HUNSTMAN_SETTINGS) {
+  global.HUNSTMAN_SETTINGS = {};
 }
 
 class Settings {
