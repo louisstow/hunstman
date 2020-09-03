@@ -2,7 +2,7 @@ import { Request } from "./Request";
 declare class QueueItem {
     request: Request;
     index: number;
-    free: boolean;
+    ready: boolean;
     constructor(request: Request, index: number);
 }
 declare class Queue {
@@ -13,7 +13,10 @@ declare class Queue {
     buffer(n: number): QueueItem[];
     size(): number;
     free(): number;
+    forEach(fn: (value: QueueItem, index: number) => void): void;
     done(): number;
+    serialize(): object[];
+    static deserialize(obj: object[]): Queue;
     static empty(): Queue;
 }
 export { Queue, QueueItem };

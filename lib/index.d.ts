@@ -7,3 +7,5 @@ export { Settings } from "./Settings";
 export { Spider, SpiderEvents, SpiderState } from "./Spider";
 import * as middleware from "./middleware/index";
 export { middleware };
+import * as utils from "./utils";
+export { utils };

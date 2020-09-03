@@ -39,6 +39,7 @@ declare class Spider extends EventEmitter {
     reset(): void;
     stats(): void;
     _onDone(resolve: Resolver): void;
+    _processResponseMiddleware(item: QueueItem): boolean;
     _processItem(resolve: Resolver, item: QueueItem): void;
     run(queue?: Requestable): Promise<Response[]>;
 }

@@ -1,3 +1,5 @@
+import type { Request } from "Request";
+
 type Header = { [h: string]: string };
 
 class Response {
@@ -5,12 +7,32 @@ class Response {
   headers: Header;
   statusText: string;
   data: any;
+  raw: string;
+  request: Request;
 
-  constructor(status: number, statusText: string, headers: Header, data: any) {
+  constructor(
+    request: Request,
+    status: number,
+    statusText: string,
+    headers: Header,
+    data: any,
+    raw: string
+  ) {
+    this.request = request;
     this.status = status;
     this.statusText = statusText;
     this.headers = headers;
     this.data = data;
+    this.raw = raw;
+  }
+
+  serialize(): object {
+    return {
+      status: this.status,
+      statusText: this.statusText,
+      headers: { ...this.headers },
+      raw: this.raw,
+    };
   }
 }
 

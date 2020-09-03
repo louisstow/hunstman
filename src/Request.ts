@@ -81,6 +81,17 @@ class Request {
     return null;
   }
 
+  serialize(): object {
+    return {
+      url: this.url,
+      headers: { ...this.headers },
+      meta: { ...this.meta },
+      method: this.method,
+      data: this.data,
+      response: this.response?.serialize(),
+    };
+  }
+
   run(): Promise<Response> {
     if (this.state === RequestState.REQUESTING) {
       throw new Error("Request has already been started");
@@ -101,6 +112,11 @@ class Request {
         data: this.data,
         headers: this.headers,
         responseType: "text",
+        transformResponse: [
+          (data) => {
+            return data;
+          },
+        ],
         cancelToken: this.cancelToken.token,
         timeout: this.timeout,
         httpsAgent: httpAgent,
@@ -111,9 +127,11 @@ class Request {
           this.endTime = Date.now();
 
           const r = new Response(
+            this,
             resp.status,
             resp.statusText,
             resp.headers,
+            resp.data,
             resp.data
           );
 
@@ -126,9 +144,11 @@ class Request {
 
           if (err.response) {
             const r = new Response(
+              this,
               err.response.status,
               err.response.statusText,
               err.response.headers,
+              err.response.data,
               err.response.data
             );
 

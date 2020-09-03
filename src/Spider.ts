@@ -103,9 +103,9 @@ class Spider extends EventEmitter {
   cancel() {
     this.state = SpiderState.CANCELLED;
 
-    this.queue.queue.forEach((item) => {
+    this.queue.forEach((item) => {
       if (item.request.state === RequestState.REQUESTING) {
-        item.free = true;
+        item.ready = true;
       }
 
       item.request.cancel();
@@ -116,18 +116,28 @@ class Spider extends EventEmitter {
     this.state = SpiderState.IDLE;
     this.resolver = null;
 
-    this.queue.queue.forEach((item) => {
-      item.free = true;
+    this.queue.forEach((item) => {
+      item.ready = true;
     });
   }
 
   stats() {}
 
   _onDone(resolve: Resolver) {
-    resolve(this.results);
     this.state = SpiderState.DONE;
-    this.resolver = null;
     this.emit(SpiderEvents.DONE, this.results);
+    resolve(this.results);
+    this.resolver = null;
+  }
+
+  _processResponseMiddleware(item: QueueItem) {
+    for (let i = 0; i < this.middleware.length; ++i) {
+      if (!this.middleware[i].processResponse(item, this)) {
+        break;
+      }
+    }
+
+    return true;
   }
 
   _processItem(resolve: Resolver, item: QueueItem) {
@@ -151,7 +161,7 @@ class Spider extends EventEmitter {
       r.run()
         .then((out) => {
           // run middleware on response / error
-          return this.middleware.every((m, n) => m.processResponse(item, this));
+          return this._processResponseMiddleware(item);
         })
         .then((passes) => {
           if (passes && item.request.response) {
@@ -164,6 +174,8 @@ class Spider extends EventEmitter {
           if (item.request.response) {
             this.results[item.index] = item.request.response;
           }
+
+          this._processResponseMiddleware(item);
           this.emit(SpiderEvents.ERROR, err, item);
         })
         .then(() => {

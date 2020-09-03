@@ -1,14 +1,15 @@
 import { Request, RequestState } from "./Request";
+import { Response } from "./Response";
 
 class QueueItem {
   request: Request;
   index: number;
-  free: boolean;
+  ready: boolean;
 
   constructor(request: Request, index: number) {
     this.request = request;
     this.index = index;
-    this.free = true;
+    this.ready = true;
   }
 }
 
@@ -29,12 +30,12 @@ class Queue {
   }
 
   dequeue(): QueueItem | null {
-    const item = this.queue.find((item) => item.free);
+    const item = this.queue.find((item) => item.ready);
     if (!item) {
       return null;
     }
 
-    item.free = false;
+    item.ready = false;
     return item;
   }
 
@@ -58,7 +59,11 @@ class Queue {
   }
 
   free(): number {
-    return this.queue.filter((item) => !!item.free).length;
+    return this.queue.filter((item) => !!item.ready).length;
+  }
+
+  forEach(fn: (value: QueueItem, index: number) => void) {
+    this.queue.forEach(fn);
   }
 
   done(): number {
@@ -67,6 +72,54 @@ class Queue {
         item.request.state !== RequestState.REQUESTING &&
         item.request.state !== RequestState.WAITING
     ).length;
+  }
+
+  serialize(): object[] {
+    return this.queue.map((item) => ({
+      index: item.index,
+      request: item.request.serialize(),
+    }));
+  }
+
+  static deserialize(obj: object[]) {
+    const items = obj
+      .map((o: any) => {
+        let req, resp;
+
+        if (o.request) {
+          req = new Request(o.request.url, o.request.method, o.request.data);
+          if (o.request.headers) {
+            req.headers = o.request.headers;
+          }
+
+          if (o.request.meta) {
+            req.meta = o.request.meta;
+          }
+
+          if (o.request.response) {
+            const respData = o.request.response;
+            resp = new Response(
+              req,
+              respData.status,
+              respData.statusText,
+              respData.headers,
+              null,
+              respData.raw
+            );
+
+            req.response = resp;
+          }
+
+          return new QueueItem(req, o.index);
+        }
+
+        return null;
+      })
+      .filter((item) => item !== null) as QueueItem[];
+
+    const q = new Queue();
+    q.queue = items;
+    return q;
   }
 
   static empty() {

@@ -38,6 +38,7 @@ declare class Request {
     setTimeout(ms: number): void;
     cancel(): void;
     duration(): number | null;
+    serialize(): object;
     run(): Promise<Response>;
 }
 export { Request, RequestState };
