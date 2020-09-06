@@ -1,4 +1,4 @@
-import axios, { CancelTokenSource, AxiosProxyConfig } from "axios";
+import axios, { CancelTokenSource, AxiosError } from "axios";
 import { Response } from "./Response";
 
 import ProxyAgent from "proxy-agent";
@@ -27,6 +27,7 @@ class Request {
   response: Response | null;
   proxy: string | false = false;
   timeout: number = 0;
+  error: AxiosError | null = null;
 
   startTime: number | null;
   endTime: number | null;
@@ -103,6 +104,7 @@ class Request {
     let httpAgent: any = undefined;
     if (this.proxy) {
       httpAgent = new ProxyAgent(this.proxy);
+      httpAgent.rejectUnauthorized = false;
     }
 
     return new Promise((resolve, reject) => {
@@ -138,9 +140,10 @@ class Request {
           this.response = r;
           resolve(r);
         })
-        .catch((err) => {
+        .catch((err: AxiosError) => {
           this.state = RequestState.FAILED;
           this.endTime = Date.now();
+          this.error = err;
 
           if (err.response) {
             const r = new Response(

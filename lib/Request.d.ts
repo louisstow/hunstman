@@ -1,4 +1,4 @@
-import { CancelTokenSource } from "axios";
+import { CancelTokenSource, AxiosError } from "axios";
 import { Response } from "./Response";
 declare enum RequestState {
     WAITING = 0,
@@ -26,6 +26,7 @@ declare class Request {
     response: Response | null;
     proxy: string | false;
     timeout: number;
+    error: AxiosError | null;
     startTime: number | null;
     endTime: number | null;
     constructor(url: string, method?: Method, data?: {

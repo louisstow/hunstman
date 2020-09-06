@@ -145,7 +145,7 @@ class Spider extends EventEmitter {
 
     this.middleware.forEach((m) => {
       p = p
-        .then((r) => m.processRequest(r))
+        .then((r) => m.processRequest(r, this))
         .catch(() => {
           return null;
         });
