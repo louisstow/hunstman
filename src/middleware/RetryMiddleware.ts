@@ -3,26 +3,41 @@ import { QueueItem } from "../Queue";
 
 class RetryMiddleware extends Middleware {
   numTimes: number = 5;
-  retryCodes: number[] = [500, 502, 503, 504, 522, 524, 408, 429, 400, 403];
+  retryStatusCodes: number[] = [
+    500,
+    502,
+    503,
+    504,
+    522,
+    524,
+    408,
+    429,
+    400,
+    403,
+  ];
+  retryErrorCodes: string[] = ["ECONNABORTED", "ETIMEDOUT"];
 
   attempts: { [url: string]: number } = {};
 
-  constructor(numTimes?: number, retryCodes?: number[]) {
+  constructor(numTimes?: number, retryStatusCodes?: number[]) {
     super();
 
     if (numTimes) {
       this.numTimes = numTimes;
     }
 
-    if (retryCodes) {
-      this.retryCodes = retryCodes;
+    if (retryStatusCodes) {
+      this.retryStatusCodes = retryStatusCodes;
     }
   }
 
   processResponse(item: QueueItem): boolean {
+    const req = item.request;
+    const resp = req.response;
+
     if (
-      item.request.response &&
-      this.retryCodes.includes(item.request.response.status)
+      (resp && this.retryStatusCodes.includes(resp.status)) ||
+      (req.error && this.retryErrorCodes.includes(req.error.code || ""))
     ) {
       // keep track of attempts
       if (!this.attempts[item.request.url]) {
