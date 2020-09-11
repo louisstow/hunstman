@@ -18,9 +18,13 @@ class DebugMiddleware extends Middleware {
       status = String(resp.status);
     } else if (req.error && req.error.code) {
       status = req.error.code;
+    } else if (req.error && req.error.message) {
+      status = req.error.message;
+    } else if (req.error && req.error.name) {
+      status = req.error.name;
     }
 
-    spider.logger.debug(`${status} from ${item.request.url}`);
+    spider.logger.debug(`<${status}> from ${item.request.url}`);
     return true;
   }
 }

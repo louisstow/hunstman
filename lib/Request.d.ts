@@ -39,6 +39,7 @@ declare class Request {
     setTimeout(ms: number): void;
     cancel(): void;
     duration(): number | null;
+    reset(): void;
     serialize(): object;
     run(): Promise<Response>;
 }

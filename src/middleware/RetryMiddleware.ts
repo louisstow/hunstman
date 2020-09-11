@@ -15,7 +15,6 @@ class RetryMiddleware extends Middleware {
     400,
     403,
   ];
-  retryErrorCodes: string[] = ["ECONNABORTED", "ETIMEDOUT"];
 
   attempts: { [url: string]: number } = {};
 
@@ -35,10 +34,7 @@ class RetryMiddleware extends Middleware {
     const req = item.request;
     const resp = req.response;
 
-    if (
-      (resp && this.retryStatusCodes.includes(resp.status)) ||
-      (req.error && this.retryErrorCodes.includes(req.error.code || ""))
-    ) {
+    if ((resp && this.retryStatusCodes.includes(resp.status)) || req.error) {
       // keep track of attempts
       if (!this.attempts[item.request.url]) {
         this.attempts[item.request.url] = 0;

@@ -82,6 +82,14 @@ class Request {
     return null;
   }
 
+  reset() {
+    this.startTime = null;
+    this.endTime = null;
+    this.error = null;
+    this.response = null;
+    this.state = RequestState.WAITING;
+  }
+
   serialize(): object {
     return {
       url: this.url,

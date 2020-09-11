@@ -109,6 +109,7 @@ class Spider extends EventEmitter {
       }
 
       item.request.cancel();
+      item.request.reset();
     });
   }
 
@@ -118,6 +119,7 @@ class Spider extends EventEmitter {
 
     this.queue.forEach((item) => {
       item.ready = true;
+      item.request.reset();
     });
   }
 

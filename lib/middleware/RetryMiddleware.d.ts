@@ -3,7 +3,6 @@ import { QueueItem } from "../Queue";
 declare class RetryMiddleware extends Middleware {
     numTimes: number;
     retryStatusCodes: number[];
-    retryErrorCodes: string[];
     attempts: {
         [url: string]: number;
     };

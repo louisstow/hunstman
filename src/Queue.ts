@@ -54,12 +54,16 @@ class Queue {
     return b;
   }
 
+  purge() {
+    this.queue = this.queue.filter((item) => item.ready);
+  }
+
   size(): number {
     return this.queue.length;
   }
 
   free(): number {
-    return this.queue.filter((item) => !!item.ready).length;
+    return this.queue.filter((item) => item.ready).length;
   }
 
   forEach(fn: (value: QueueItem, index: number) => void) {
