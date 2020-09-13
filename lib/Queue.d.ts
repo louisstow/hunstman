@@ -18,6 +18,7 @@ declare class Queue {
     buffer(n: number): QueueItem[];
     clearFinished(): void;
     size(): number;
+    countInUse(): number;
     countRemainingItems(): number;
     countFinishedItems(): number;
     forEach(fn: (value: QueueItem, index: number) => void): void;

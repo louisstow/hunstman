@@ -162,12 +162,18 @@ class Spider extends EventEmitter {
       return;
     }
 
-    const nextItem = this.queue.reserveFirstReadyItem();
-    if (nextItem) {
-      this.runQueueItem(nextItem);
-    } else {
+    const maxRequests = this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS);
+    const inUse = this.queue.countInUse();
+    const reserve = Math.max(maxRequests - inUse, 0);
+
+    const buffer = this.queue.buffer(reserve);
+
+    if (buffer.length === 0) {
       this.checkSpiderFinished();
+      return;
     }
+
+    buffer.forEach((item) => this.runQueueItem(item));
   }
 
   private async runRequestMiddleware(item: QueueItem) {
@@ -235,17 +241,7 @@ class Spider extends EventEmitter {
 
   private startCrawl(resolve: Resolver) {
     this.doneResolver = resolve;
-
-    const buffer = this.queue.buffer(
-      this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS)
-    );
-
-    if (buffer.length === 0) {
-      this.handleSpiderFinished();
-      return;
-    }
-
-    buffer.forEach((item) => this.runQueueItem(item));
+    this.runNextItem();
   }
 
   run(queue?: Requestable): Promise<Response[]> {

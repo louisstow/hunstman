@@ -71,6 +71,11 @@ class Queue {
     return this.queue.length;
   }
 
+  countInUse(): number {
+    return this.queue.filter((item) => item.state === QueueItemState.IN_USE)
+      .length;
+  }
+
   countRemainingItems(): number {
     return this.queue.filter((item) => item.state !== QueueItemState.FINISHED)
       .length;
