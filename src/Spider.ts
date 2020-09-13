@@ -1,10 +1,11 @@
-import { Queue, QueueItem } from "./Queue";
+import { Queue, QueueItem, QueueItemState } from "./Queue";
 import { Request, RequestState } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
 import { EventEmitter } from "events";
 import { Log, Logger } from "./Log";
+import { AxiosError } from "__mocks__/axios";
 
 enum SpiderState {
   IDLE,
@@ -36,7 +37,8 @@ class Spider extends EventEmitter {
   settings: Settings;
   logger: Log;
   results: Array<Response>;
-  resolver: Resolver | null;
+
+  doneResolver: Resolver;
 
   constructor(
     name: string,
@@ -47,15 +49,10 @@ class Spider extends EventEmitter {
     super();
 
     this.name = name;
+    this.queue = Queue.empty();
 
-    if (queue instanceof Request) {
-      this.queue = new Queue([queue]);
-    } else if (Array.isArray(queue)) {
-      this.queue = new Queue(queue);
-    } else if (queue instanceof Queue) {
-      this.queue = queue;
-    } else {
-      this.queue = Queue.empty();
+    if (queue) {
+      this.setQueue(queue);
     }
 
     this.settings = settings || new Settings();
@@ -64,12 +61,22 @@ class Spider extends EventEmitter {
     this.state = SpiderState.IDLE;
     this.middleware = [];
     this.results = [];
-    this.resolver = null;
+    this.doneResolver = () => {};
 
     // global middleware from settings
     if (this.settings.get("middleware", false)) {
       const middleware = this.settings.get("middleware", []) as Middleware[];
       middleware.forEach((m) => this.addMiddleware(m));
+    }
+  }
+
+  setQueue(queue: Requestable) {
+    if (queue instanceof Request) {
+      this.queue = new Queue([queue]);
+    } else if (Array.isArray(queue)) {
+      this.queue = new Queue(queue);
+    } else if (queue instanceof Queue) {
+      this.queue = queue;
     }
   }
 
@@ -82,22 +89,8 @@ class Spider extends EventEmitter {
   }
 
   resume() {
-    if (!this.resolver) {
-      throw new Error("Missing resolver to resume");
-    }
-
     this.state = SpiderState.CRAWLING;
-
-    const buffer = this.queue.buffer(
-      this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS)
-    );
-    if (!buffer.length) {
-      this._onDone(this.resolver);
-    }
-
-    buffer.forEach(
-      (item) => this.resolver && this._processItem(this.resolver, item)
-    );
+    this.startCrawl(this.doneResolver);
   }
 
   cancel() {
@@ -105,7 +98,7 @@ class Spider extends EventEmitter {
 
     this.queue.forEach((item) => {
       if (item.request.state === RequestState.REQUESTING) {
-        item.ready = true;
+        item.state = QueueItemState.FINISHED;
       }
 
       item.request.cancel();
@@ -115,96 +108,145 @@ class Spider extends EventEmitter {
 
   reset() {
     this.state = SpiderState.IDLE;
-    this.resolver = null;
+    this.doneResolver = () => {};
+  }
+
+  purge() {
+    this.queue.forEach((item) => {
+      if (item.state === QueueItemState.FINISHED) {
+        delete this.results[item.index];
+      }
+    });
+
+    this.queue.clearFinished();
+  }
+
+  private applySettingsToQueueRequests() {
+    const proxy = this.settings.get("proxy", null) as string | null;
+    const timeout = this.settings.get("timeout", DEFAULT_TIMEOUT) as number;
 
     this.queue.forEach((item) => {
-      item.ready = true;
-      item.request.reset();
+      if (proxy) {
+        item.request.setProxy(proxy);
+      }
+
+      item.request.setTimeout(timeout);
     });
   }
 
-  stats() {}
-
-  _onDone(resolve: Resolver) {
-    this.state = SpiderState.DONE;
-    this.emit(SpiderEvents.DONE, this.results);
-    resolve(this.results);
-    this.resolver = null;
+  private skipQueueItem(item: QueueItem) {
+    this.emit(SpiderEvents.SKIP, item);
+    item.state = QueueItemState.FINISHED;
+    item.request.state = RequestState.SKIPPED;
   }
 
-  _processResponseMiddleware(item: QueueItem) {
+  private handleSpiderFinished() {
+    this.state = SpiderState.DONE;
+    this.emit(SpiderEvents.DONE, this.results);
+
+    this.doneResolver(this.results);
+  }
+
+  private checkSpiderFinished() {
+    const remaining = this.queue.countRemainingItems();
+
+    if (remaining === 0) {
+      this.handleSpiderFinished();
+    }
+  }
+
+  private runNextItem() {
+    if (
+      this.state === SpiderState.CANCELLED ||
+      this.state === SpiderState.PAUSED
+    ) {
+      return;
+    }
+
+    const nextItem = this.queue.reserveFirstReadyItem();
+    if (nextItem) {
+      this.runQueueItem(nextItem);
+    } else {
+      this.checkSpiderFinished();
+    }
+  }
+
+  private async runRequestMiddleware(item: QueueItem) {
+    let r: Request | null = item.request;
     for (let i = 0; i < this.middleware.length; ++i) {
-      if (!this.middleware[i].processResponse(item, this)) {
-        break;
+      r = await this.middleware[i].processRequest(r, this);
+
+      // exit immediately on null
+      if (r === null) {
+        return null;
+      }
+    }
+
+    return r;
+  }
+
+  private async runResponseMiddleware(item: QueueItem) {
+    for (let i = 0; i < this.middleware.length; ++i) {
+      const passes = await this.middleware[i].processResponse(item, this);
+      if (!passes) {
+        return false;
       }
     }
 
     return true;
   }
 
-  _processItem(resolve: Resolver, item: QueueItem) {
-    let p = Promise.resolve<Request | null>(item.request);
+  private async runQueueItem(item: QueueItem) {
+    const req = await this.runRequestMiddleware(item);
 
-    this.middleware.forEach((m) => {
-      p = p
-        .then((r) => m.processRequest(r, this))
-        .catch(() => {
-          return null;
-        });
-    });
+    if (req === null) {
+      this.skipQueueItem(item);
+      return;
+    }
 
-    p.then((r) => {
-      if (r === null) {
-        this.emit(SpiderEvents.SKIP, item);
-        item.request.state = RequestState.SKIPPED;
-        return false;
+    try {
+      const resp = await req.run();
+      item.state = QueueItemState.FINISHED;
+
+      // do not trigger or continue processing if
+      // the spider is cancelled
+      if (this.state === SpiderState.CANCELLED) {
+        return;
       }
 
-      r.run()
-        .then((out) => {
-          // run middleware on response / error
-          return this._processResponseMiddleware(item);
-        })
-        .then((passes) => {
-          if (passes && item.request.response) {
-            this.results[item.index] = item.request.response;
-            this.emit(SpiderEvents.RESPONSE, this.results[item.index], item);
-          }
-          return passes;
-        })
-        .catch((err) => {
-          if (item.request.response) {
-            this.results[item.index] = item.request.response;
-          }
+      const passes = await this.runResponseMiddleware(item);
 
-          this._processResponseMiddleware(item);
-          this.emit(SpiderEvents.ERROR, err, item);
-        })
-        .then(() => {
-          this.emit(SpiderEvents.REQUEST_DONE, item);
+      if (passes && resp) {
+        this.results[item.index] = resp;
+        this.emit(SpiderEvents.RESPONSE, resp, item);
+      }
+    } catch (err) {
+      if (item.request.response) {
+        this.results[item.index] = item.request.response;
+      }
 
-          if (
-            this.state === SpiderState.CANCELLED ||
-            this.state === SpiderState.PAUSED
-          ) {
-            return;
-          }
+      item.state = QueueItemState.FINISHED;
+      await this.runResponseMiddleware(item);
+      this.emit(SpiderEvents.ERROR, err, item);
+    }
 
-          const nextItem = this.queue.dequeue();
+    this.emit(SpiderEvents.REQUEST_DONE, item);
+    this.runNextItem();
+  }
 
-          if (nextItem) {
-            this._processItem(resolve, nextItem);
-          } else {
-            const done = this.queue.done();
-            const free = this.queue.free();
-            const size = this.queue.size();
+  private startCrawl(resolve: Resolver) {
+    this.doneResolver = resolve;
 
-            if (done === size && free === 0) {
-              this._onDone(resolve);
-            }
-          }
-        });
-    });
+    const buffer = this.queue.buffer(
+      this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS)
+    );
+
+    if (buffer.length === 0) {
+      this.handleSpiderFinished();
+      return;
+    }
+
+    buffer.forEach((item) => this.runQueueItem(item));
   }
 
   run(queue?: Requestable): Promise<Response[]> {
@@ -214,46 +256,18 @@ class Spider extends EventEmitter {
 
     // if a requestable is passed in, override our queue
     if (queue) {
-      if (queue instanceof Queue) {
-        this.queue = queue;
-      } else if (queue instanceof Request) {
-        this.queue = new Queue([queue]);
-      } else {
-        this.queue = new Queue(queue);
-      }
+      this.setQueue(queue);
     }
 
     if (!this.queue.size()) {
       throw new Error("Queue is empty");
     }
 
-    // initialize the proxy settings on the requests
-    if (this.settings.get("proxy", false)) {
-      const proxy = this.settings.get("proxy") as string;
-      const timeout = this.settings.get("timeout", DEFAULT_TIMEOUT) as number;
-
-      this.queue.queue.forEach((item) => {
-        item.request.setProxy(proxy);
-        item.request.setTimeout(timeout);
-      });
-    }
+    this.applySettingsToQueueRequests();
 
     this.state = SpiderState.CRAWLING;
 
-    const promise = new Promise<Response[]>((resolve) => {
-      this.resolver = resolve;
-      const buffer = this.queue.buffer(
-        this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS)
-      );
-
-      if (!buffer.length) {
-        this._onDone(resolve);
-      }
-
-      buffer.forEach((item) => this._processItem(resolve, item));
-    });
-
-    return promise;
+    return new Promise<Response[]>(this.startCrawl.bind(this));
   }
 }
 

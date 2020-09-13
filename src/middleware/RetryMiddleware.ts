@@ -1,5 +1,5 @@
 import { Middleware } from "../Middleware";
-import { QueueItem } from "../Queue";
+import { QueueItem, QueueItemState } from "../Queue";
 
 class RetryMiddleware extends Middleware {
   numTimes: number = 5;
@@ -30,7 +30,7 @@ class RetryMiddleware extends Middleware {
     }
   }
 
-  processResponse(item: QueueItem): boolean {
+  processResponse(item: QueueItem) {
     const req = item.request;
     const resp = req.response;
 
@@ -39,15 +39,15 @@ class RetryMiddleware extends Middleware {
       if (!this.attempts[item.request.url]) {
         this.attempts[item.request.url] = 0;
       } else if (this.attempts[item.request.url] >= this.numTimes) {
-        return true;
+        return Promise.resolve(true);
       }
 
-      item.ready = true;
+      item.state = QueueItemState.READY;
       this.attempts[item.request.url]++;
-      return false;
+      return Promise.resolve(false);
     }
 
-    return true;
+    return Promise.resolve(true);
   }
 }
 

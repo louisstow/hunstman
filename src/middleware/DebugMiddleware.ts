@@ -9,7 +9,7 @@ class DebugMiddleware extends Middleware {
     return Promise.resolve(r);
   }
 
-  processResponse(item: QueueItem, spider: Spider): boolean {
+  processResponse(item: QueueItem, spider: Spider) {
     const req = item.request;
     const resp = req.response;
     let status: string = "UNK";
@@ -25,7 +25,7 @@ class DebugMiddleware extends Middleware {
     }
 
     spider.logger.debug(`<${status}> from ${item.request.url}`);
-    return true;
+    return Promise.resolve(true);
   }
 }
 

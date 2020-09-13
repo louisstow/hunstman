@@ -1,9 +1,15 @@
-import axios, { CancelTokenSource, AxiosError } from "axios";
+import axios, {
+  CancelTokenSource,
+  AxiosError,
+  AxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
 import { Response } from "./Response";
 
 import ProxyAgent from "proxy-agent";
 
 const CancelToken = axios.CancelToken;
+const nop = (data: any) => data;
 
 enum RequestState {
   WAITING,
@@ -49,32 +55,32 @@ class Request {
     this.endTime = null;
   }
 
-  setMeta(key: string, value: any) {
+  public setMeta(key: string, value: any) {
     this.meta[key] = value;
   }
 
-  getMeta(key: string) {
+  public getMeta(key: string) {
     return this.meta[key];
   }
 
-  setHeader(key: string, value: string) {
+  public setHeader(key: string, value: string) {
     this.headers[key] = value;
   }
 
-  setProxy(proxy: string) {
+  public setProxy(proxy: string) {
     this.proxy = proxy;
   }
 
-  setTimeout(ms: number) {
+  public setTimeout(ms: number) {
     this.timeout = ms;
   }
 
-  cancel() {
+  public cancel() {
     this.state = RequestState.CANCELLED;
     this.cancelToken.cancel();
   }
 
-  duration(): number | null {
+  public duration(): number | null {
     if (this.startTime && this.endTime) {
       return this.endTime - this.startTime;
     }
@@ -82,7 +88,7 @@ class Request {
     return null;
   }
 
-  reset() {
+  public reset() {
     this.startTime = null;
     this.endTime = null;
     this.error = null;
@@ -90,7 +96,7 @@ class Request {
     this.state = RequestState.WAITING;
   }
 
-  serialize(): object {
+  public serialize(): object {
     return {
       url: this.url,
       headers: { ...this.headers },
@@ -101,74 +107,65 @@ class Request {
     };
   }
 
-  run(): Promise<Response> {
+  public setResponse(resp: AxiosResponse): Response {
+    const r = new Response(
+      this,
+      resp.status,
+      resp.statusText,
+      resp.headers,
+      resp.data,
+      resp.data
+    );
+
+    this.response = r;
+    return r;
+  }
+
+  private createAxiosProps(): AxiosRequestConfig {
+    const httpAgent = this.proxy ? new ProxyAgent(this.proxy) : undefined;
+
+    return {
+      url: this.url,
+      method: this.method,
+      data: this.data,
+      headers: this.headers,
+      responseType: "text",
+      transformResponse: [nop],
+      cancelToken: this.cancelToken.token,
+      timeout: this.timeout,
+      httpsAgent: httpAgent,
+      httpAgent: httpAgent,
+    };
+  }
+
+  public async run(): Promise<Response> {
     if (this.state === RequestState.REQUESTING) {
       throw new Error("Request has already been started");
     }
 
+    this.reset();
     this.state = RequestState.REQUESTING;
     this.startTime = Date.now();
 
-    let httpAgent: any = undefined;
-    if (this.proxy) {
-      httpAgent = new ProxyAgent(this.proxy);
-      httpAgent.rejectUnauthorized = false;
+    try {
+      const resp = await axios(this.createAxiosProps());
+      this.state = RequestState.COMPLETED;
+      this.endTime = Date.now();
+
+      return this.setResponse(resp);
+    } catch (caughtError) {
+      const err = caughtError as AxiosError;
+
+      this.state = RequestState.FAILED;
+      this.endTime = Date.now();
+      this.error = err;
+
+      if (err.response) {
+        this.setResponse(err.response);
+      }
+
+      throw err;
     }
-
-    return new Promise((resolve, reject) => {
-      axios({
-        url: this.url,
-        method: this.method,
-        data: this.data,
-        headers: this.headers,
-        responseType: "text",
-        transformResponse: [
-          (data) => {
-            return data;
-          },
-        ],
-        cancelToken: this.cancelToken.token,
-        timeout: this.timeout,
-        httpsAgent: httpAgent,
-        httpAgent: httpAgent,
-      })
-        .then((resp) => {
-          this.state = RequestState.COMPLETED;
-          this.endTime = Date.now();
-
-          const r = new Response(
-            this,
-            resp.status,
-            resp.statusText,
-            resp.headers,
-            resp.data,
-            resp.data
-          );
-
-          this.response = r;
-          resolve(r);
-        })
-        .catch((err: AxiosError) => {
-          this.state = RequestState.FAILED;
-          this.endTime = Date.now();
-          this.error = err;
-
-          if (err.response) {
-            const r = new Response(
-              this,
-              err.response.status,
-              err.response.statusText,
-              err.response.headers,
-              err.response.data,
-              err.response.data
-            );
-
-            this.response = r;
-          }
-
-          reject(err);
-        });
-    });
   }
 }
 

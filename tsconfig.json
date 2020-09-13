@@ -5,6 +5,7 @@
     "outDir": "../lib",
     "target": "es6",
     "module": "commonjs",
+    "moduleResolution": "node",
     "lib": ["es6"],
     "allowJs": true,
     "strict": true,
@@ -14,5 +15,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true
-  }
+  },
+  "exclude": ["**/*.spec.ts", "tests"]
 }

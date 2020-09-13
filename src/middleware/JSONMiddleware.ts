@@ -11,24 +11,24 @@ class JSONMiddleware extends Middleware {
     }
   }
 
-  processResponse(item: QueueItem): boolean {
+  processResponse(item: QueueItem) {
     const resp = item.request.response;
     if (resp) {
       if (
         this.requireContentType &&
         !resp.headers?.["content-type"]?.includes("json")
       ) {
-        return true;
+        return Promise.resolve(true);
       }
 
       try {
         resp.data = JSON.parse(resp.raw);
       } catch (err) {
-        return false;
+        return Promise.resolve(false);
       }
     }
 
-    return true;
+    return Promise.resolve(true);
   }
 }
 

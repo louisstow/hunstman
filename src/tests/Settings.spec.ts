@@ -1,4 +1,4 @@
-import { Settings } from "../src/Settings";
+import { Settings } from "../Settings";
 
 jest.mock("fs");
 
@@ -13,7 +13,7 @@ test("Basic settings functions", () => {
 });
 
 test("Global settings", () => {
-  global.HUNSTMAN_SETTINGS = { GLOBAL: 56 };
+  global.HUNTSMAN_SETTINGS = { GLOBAL: 56 };
   const s = new Settings();
   expect(s.get("GLOBAL")).toBe(56);
 });

@@ -1,5 +1,5 @@
-import { Spider } from "../src/Spider";
-import { Logger } from "../src/Log";
+import { Spider } from "../Spider";
+import { Logger } from "../Log";
 
 let out: string = "";
 

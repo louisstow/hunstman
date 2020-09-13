@@ -23,10 +23,13 @@ const cache = (
   spider: Spider,
   skip?: boolean
 ): { run: (r?: any) => Promise<Response[]> } | Spider => {
-  const shouldSkip = skip === true;
+  if (skip === true) {
+    return spider;
+  }
+
   const data = loadCache(spider.name);
 
-  if (!data || shouldSkip) {
+  if (!data) {
     spider.once(SpiderEvents.DONE, () => {
       saveCache(spider.name, spider.queue);
     });

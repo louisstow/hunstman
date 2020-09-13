@@ -1,4 +1,4 @@
-import type { Request } from "Request";
+import type { Request } from "./Request";
 
 type Header = { [h: string]: string };
 

@@ -37,6 +37,7 @@ declare class Spider extends EventEmitter {
     resume(): void;
     cancel(): void;
     reset(): void;
+    purge(): void;
     stats(): void;
     _onDone(resolve: Resolver): void;
     _processResponseMiddleware(item: QueueItem): boolean;

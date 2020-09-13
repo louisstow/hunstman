@@ -1,6 +1,6 @@
 import { Middleware } from "../Middleware";
 import { Request } from "../Request";
-import { QueueItem } from "../Queue";
+import { QueueItem, QueueItemState } from "../Queue";
 import { Spider } from "../Spider";
 
 class ProxyListMiddleware extends Middleware {
@@ -22,7 +22,7 @@ class ProxyListMiddleware extends Middleware {
     return Promise.resolve(r);
   }
 
-  processResponse(item: QueueItem, spider: Spider): boolean {
+  processResponse(item: QueueItem, spider: Spider) {
     const req = item.request;
     const resp = req.response;
 
@@ -44,11 +44,11 @@ class ProxyListMiddleware extends Middleware {
         spider.logger.info("new proxy list size", this.proxyList.length);
       }
 
-      item.ready = true;
-      return false;
+      item.state = QueueItemState.READY;
+      return Promise.resolve(false);
     }
 
-    return true;
+    return Promise.resolve(true);
   }
 }
 

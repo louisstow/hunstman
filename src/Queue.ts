@@ -1,15 +1,21 @@
 import { Request, RequestState } from "./Request";
 import { Response } from "./Response";
 
+enum QueueItemState {
+  READY,
+  IN_USE,
+  FINISHED,
+}
+
 class QueueItem {
   request: Request;
   index: number;
-  ready: boolean;
+  state: QueueItemState;
 
   constructor(request: Request, index: number) {
     this.request = request;
     this.index = index;
-    this.ready = true;
+    this.state = QueueItemState.READY;
   }
 }
 
@@ -29,13 +35,14 @@ class Queue {
     this.queue.push(item);
   }
 
-  dequeue(): QueueItem | null {
-    const item = this.queue.find((item) => item.ready);
+  reserveFirstReadyItem(): QueueItem | null {
+    const item = this.queue.find((item) => item.state === QueueItemState.READY);
+
     if (!item) {
       return null;
     }
 
-    item.ready = false;
+    item.state = QueueItemState.IN_USE;
     return item;
   }
 
@@ -43,7 +50,7 @@ class Queue {
     const b: QueueItem[] = [];
 
     while (n--) {
-      const item = this.dequeue();
+      const item = this.reserveFirstReadyItem();
       if (!item) {
         break;
       }
@@ -54,28 +61,28 @@ class Queue {
     return b;
   }
 
-  purge() {
-    this.queue = this.queue.filter((item) => item.ready);
+  clearFinished() {
+    this.queue = this.queue.filter(
+      (item) => item.state !== QueueItemState.FINISHED
+    );
   }
 
   size(): number {
     return this.queue.length;
   }
 
-  free(): number {
-    return this.queue.filter((item) => item.ready).length;
+  countRemainingItems(): number {
+    return this.queue.filter((item) => item.state !== QueueItemState.FINISHED)
+      .length;
+  }
+
+  countFinishedItems(): number {
+    return this.queue.filter((item) => item.state === QueueItemState.FINISHED)
+      .length;
   }
 
   forEach(fn: (value: QueueItem, index: number) => void) {
     this.queue.forEach(fn);
-  }
-
-  done(): number {
-    return this.queue.filter(
-      (item) =>
-        item.request.state !== RequestState.REQUESTING &&
-        item.request.state !== RequestState.WAITING
-    ).length;
   }
 
   serialize(): object[] {
@@ -131,4 +138,4 @@ class Queue {
   }
 }
 
-export { Queue, QueueItem };
+export { Queue, QueueItem, QueueItemState };

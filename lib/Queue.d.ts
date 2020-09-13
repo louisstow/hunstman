@@ -11,6 +11,7 @@ declare class Queue {
     enqueue(req: Request): void;
     dequeue(): QueueItem | null;
     buffer(n: number): QueueItem[];
+    purge(): void;
     size(): number;
     free(): number;
     forEach(fn: (value: QueueItem, index: number) => void): void;

@@ -1,8 +1,8 @@
-import { Spider, SpiderEvents } from "../src/Spider";
-import { Request } from "../src/Request";
-import { QueueItem } from "../src/Queue";
-import { Middleware } from "../src/Middleware";
-import { Response } from "../src/Response";
+import { Spider, SpiderEvents } from "../Spider";
+import { Request } from "../Request";
+import { QueueItem, QueueItemState } from "../Queue";
+import { Middleware } from "../Middleware";
+import { Response } from "../Response";
 
 import { simulateRequest } from "./request.util";
 
@@ -19,13 +19,17 @@ test("Process request middleware", (done) => {
 
   const slowMiddleware = new Middleware();
   slowMiddleware.processRequest = jest.fn().mockImplementation((r) => {
-    return new Promise((resolve) => setTimeout(() => resolve(r), 100));
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(r);
+      }, 200);
+    });
   });
 
   const skipMiddleware = new Middleware();
   skipMiddleware.processRequest = jest.fn().mockImplementation((r: Request) => {
-    return new Promise((resolve, reject) => {
-      if (r.url === "n:1") reject();
+    return new Promise((resolve) => {
+      if (r.url === "n:1") resolve(null);
       else resolve(r);
     });
   });
@@ -38,7 +42,7 @@ test("Process request middleware", (done) => {
       headers: { "X-ID": `${i}` },
     };
 
-    const r = simulateRequest(i, mockResponse, 100);
+    const r = simulateRequest(i, mockResponse, 200);
     requests.push(r);
   }
 
@@ -47,8 +51,9 @@ test("Process request middleware", (done) => {
   s.addMiddleware(slowMiddleware);
   s.addMiddleware(skipMiddleware);
 
-  const p = s.run();
   const start = Date.now();
+  const p = s.run();
+
   let req_count = 0;
 
   s.on(SpiderEvents.REQUEST_DONE, (item: QueueItem) => {
@@ -81,7 +86,7 @@ test("Process response middleware", (done) => {
       if (item.request.response) {
         item.request.response.data = JSON.parse(item.request.response.data);
       }
-      return true;
+      return Promise.resolve(true);
     });
 
   const retryMiddleware = new Middleware();
@@ -92,10 +97,10 @@ test("Process response middleware", (done) => {
     .mockImplementation((item: QueueItem, spider: Spider) => {
       if (item.request.url == "n:1" && retryCounter < maxRetry) {
         retryCounter++;
-        item.free = true;
-        return false;
+        item.state = QueueItemState.READY;
+        return Promise.resolve(false);
       }
-      return true;
+      return Promise.resolve(true);
     });
 
   for (let i = 0; i < N; ++i) {
@@ -126,7 +131,6 @@ test("Process response middleware", (done) => {
   p.then(() => {
     expect(req_count).toBe(N);
     expect(retryCounter).toBe(maxRetry);
-    //expect(s.queue.queue[1].free).toBe(true);
     done();
   });
 });
