@@ -44,10 +44,12 @@ const cache = (
       item.request.response.data = item.request.response.raw;
     }
 
-    spider._processResponseMiddleware(item);
-    if (item.request.response) {
-      spider.results[item.index] = item.request.response;
-    }
+    // @ts-ignore
+    spider.runResponseMiddleware(item).then(() => {
+      if (item.request.response) {
+        spider.results[item.index] = item.request.response;
+      }
+    });
   });
 
   return {

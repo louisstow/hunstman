@@ -11,6 +11,6 @@ declare class ProxyListMiddleware extends Middleware {
     maxAttempts: number;
     constructor(proxyList: string[], rotateProxyCodes?: number[]);
     processRequest(r: Request, spider: Spider): Promise<Request>;
-    processResponse(item: QueueItem, spider: Spider): boolean;
+    processResponse(item: QueueItem, spider: Spider): Promise<boolean>;
 }
 export { ProxyListMiddleware };

@@ -7,6 +7,6 @@ declare class RetryMiddleware extends Middleware {
         [url: string]: number;
     };
     constructor(numTimes?: number, retryStatusCodes?: number[]);
-    processResponse(item: QueueItem): boolean;
+    processResponse(item: QueueItem): Promise<boolean>;
 }
 export { RetryMiddleware };

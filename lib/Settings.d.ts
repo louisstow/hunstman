@@ -4,7 +4,7 @@ declare type SettingsKeyVal = {
 declare global {
     namespace NodeJS {
         interface Global {
-            HUNSTMAN_SETTINGS: SettingsKeyVal;
+            HUNTSMAN_SETTINGS: SettingsKeyVal;
         }
     }
 }

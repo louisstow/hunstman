@@ -1,4 +1,4 @@
-import { CancelTokenSource, AxiosError } from "axios";
+import { CancelTokenSource, AxiosError, AxiosResponse } from "axios";
 import { Response } from "./Response";
 declare enum RequestState {
     WAITING = 0,
@@ -41,6 +41,8 @@ declare class Request {
     duration(): number | null;
     reset(): void;
     serialize(): object;
+    setResponse(resp: AxiosResponse): Response;
+    private createAxiosProps;
     run(): Promise<Response>;
 }
 export { Request, RequestState };

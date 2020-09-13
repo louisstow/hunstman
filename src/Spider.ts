@@ -5,7 +5,6 @@ import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
 import { EventEmitter } from "events";
 import { Log, Logger } from "./Log";
-import { AxiosError } from "__mocks__/axios";
 
 enum SpiderState {
   IDLE,

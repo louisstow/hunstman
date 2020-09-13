@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "baseUrl": "./",
-    "rootDir": "./",
-    "outDir": "../lib",
+    "baseUrl": "./src",
+    "rootDir": "./src",
+    "outDir": "./lib",
     "target": "es6",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -16,5 +16,6 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true
   },
-  "exclude": ["**/*.spec.ts", "tests"]
+  "exclude": ["**/*.spec.ts", "src/tests"],
+  "include": ["src"]
 }

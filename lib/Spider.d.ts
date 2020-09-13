@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { Queue, QueueItem } from "./Queue";
+import { Queue } from "./Queue";
 import { Request } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
@@ -30,18 +30,24 @@ declare class Spider extends EventEmitter {
     settings: Settings;
     logger: Log;
     results: Array<Response>;
-    resolver: Resolver | null;
+    doneResolver: Resolver;
     constructor(name: string, queue?: Requestable, settings?: Settings, logger?: Logger);
+    setQueue(queue: Requestable): void;
     addMiddleware(middleware: Middleware): void;
     pause(): void;
     resume(): void;
     cancel(): void;
     reset(): void;
     purge(): void;
-    stats(): void;
-    _onDone(resolve: Resolver): void;
-    _processResponseMiddleware(item: QueueItem): boolean;
-    _processItem(resolve: Resolver, item: QueueItem): void;
+    private applySettingsToQueueRequests;
+    private skipQueueItem;
+    private handleSpiderFinished;
+    private checkSpiderFinished;
+    private runNextItem;
+    private runRequestMiddleware;
+    private runResponseMiddleware;
+    private runQueueItem;
+    private startCrawl;
     run(queue?: Requestable): Promise<Response[]>;
 }
 export { Spider, SpiderEvents, SpiderState };
