@@ -162,7 +162,10 @@ class Spider extends EventEmitter {
       return;
     }
 
-    const maxRequests = this.settings.get("maxRequests", DEFAULT_MAX_REQUESTS);
+    const maxRequests = this.settings.get(
+      "maxRequests",
+      DEFAULT_MAX_REQUESTS
+    ) as number;
     const inUse = this.queue.countInUse();
     const reserve = Math.max(maxRequests - inUse, 0);
 
