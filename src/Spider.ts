@@ -108,11 +108,17 @@ class Spider extends EventEmitter {
   reset() {
     this.state = SpiderState.IDLE;
     this.doneResolver = () => {};
+
+    this.queue.forEach((item) => {
+      item.state = QueueItemState.READY;
+      item.request.reset();
+    });
   }
 
   purge() {
     this.queue.forEach((item) => {
       if (item.state === QueueItemState.FINISHED) {
+        if (item.request.response) item.request.response.data = null;
         delete this.results[item.index];
       }
     });
@@ -229,6 +235,10 @@ class Spider extends EventEmitter {
         this.emit(SpiderEvents.RESPONSE, resp, item);
       }
     } catch (err) {
+      if (this.state === SpiderState.CANCELLED) {
+        return;
+      }
+
       if (item.request.response) {
         this.results[item.index] = item.request.response;
       }

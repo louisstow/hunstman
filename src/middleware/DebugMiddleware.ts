@@ -22,6 +22,9 @@ class DebugMiddleware extends Middleware {
       status = req.error.message;
     } else if (req.error && req.error.name) {
       status = req.error.name;
+    } else if (req.error) {
+      status = "ERR";
+      spider.logger.error(req.error);
     }
 
     spider.logger.debug(`<${status}> from ${item.request.url}`);
