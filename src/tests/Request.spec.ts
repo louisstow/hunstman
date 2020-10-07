@@ -30,10 +30,14 @@ test("Basic request functions", () => {
 test("Requesting state", async () => {
   const axios = require("axios");
 
-  const r = new Request("https://awebsiteurl.tld/");
+  const url = "https://awebsiteurl.tld/";
+  const r = new Request(url);
   axios.__setMockedRepsonse(
     new Promise((resolve) =>
-      setTimeout(() => resolve(new Response(r, 200, "OK", {}, "", "")), 200)
+      setTimeout(
+        () => resolve(new Response(r, url, 200, "OK", {}, "", "")),
+        200
+      )
     )
   );
 
@@ -57,9 +61,12 @@ test("Requesting state", async () => {
   expect(r.timeout).toBe(400);
   expect(r.proxy).toBe("http://localhost:8118");
 
-  const r2 = new Request("https://websitewith404response.tld/nopathfoundhere");
+  const url2 = "https://websitewith404response.tld/nopathfoundhere";
+  const r2 = new Request(url2);
   axios.__setMockedRepsonse(
-    Promise.reject({ response: new Response(r2, 404, "Not Found", {}, "", "") })
+    Promise.reject({
+      response: new Response(r2, url2, 404, "Not Found", {}, "", ""),
+    })
   );
 
   try {

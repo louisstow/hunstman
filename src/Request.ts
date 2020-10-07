@@ -110,6 +110,7 @@ class Request {
   public setResponse(resp: AxiosResponse): Response {
     const r = new Response(
       this,
+      resp?.request?.responseURL,
       resp.status,
       resp.statusText,
       resp.headers,

@@ -3,6 +3,7 @@ import type { Request } from "./Request";
 type Header = { [h: string]: string };
 
 class Response {
+  url: string;
   status: number;
   headers: Header;
   statusText: string;
@@ -12,6 +13,7 @@ class Response {
 
   constructor(
     request: Request,
+    url: string,
     status: number,
     statusText: string,
     headers: Header,
@@ -19,6 +21,7 @@ class Response {
     raw: string
   ) {
     this.request = request;
+    this.url = url;
     this.status = status;
     this.statusText = statusText;
     this.headers = headers;
@@ -28,6 +31,7 @@ class Response {
 
   serialize(): object {
     return {
+      url: this.url,
       status: this.status,
       statusText: this.statusText,
       headers: { ...this.headers },

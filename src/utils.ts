@@ -39,30 +39,29 @@ const cache = (
 
   spider.queue = data;
 
-  data.queue.forEach((item) => {
-    if (item.request.response && !item.request.response.data) {
-      item.request.response.data = item.request.response.raw;
-    }
-
-    // @ts-ignore
-    spider.runResponseMiddleware(item).then(() => {
-      if (item.request.response) {
-        spider.results[item.index] = item.request.response;
-      }
-    });
-  });
-
   return {
-    run(): Promise<Response[]> {
+    async run(): Promise<Response[]> {
       spider.state = SpiderState.DONE;
 
-      data.queue.forEach((item) => {
+      for (let i = 0; i < data.queue.length; ++i) {
+        const item = data.queue[i];
+        if (item.request.response && !item.request.response.data) {
+          item.request.response.data = item.request.response.raw;
+        }
+
+        // @ts-ignore
+        await spider.runResponseMiddleware(item);
+
+        if (item.request.response) {
+          spider.results[item.index] = item.request.response;
+        }
+
         spider.emit(SpiderEvents.RESPONSE, item.request.response, item);
         spider.emit(SpiderEvents.REQUEST_DONE, item);
-      });
+      }
 
       spider.emit(SpiderEvents.DONE, spider.results);
-      return Promise.resolve(spider.results);
+      return spider.results;
     },
   };
 };

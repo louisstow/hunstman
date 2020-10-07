@@ -116,6 +116,7 @@ class Queue {
             const respData = o.request.response;
             resp = new Response(
               req,
+              respData.url,
               respData.status,
               respData.statusText,
               respData.headers,
