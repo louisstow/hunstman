@@ -112,8 +112,16 @@ class Queue {
             req.meta = o.request.meta;
           }
 
+          if (o.request.responseType) {
+            req.responseType = o.request.responseType;
+          }
+
           if (o.request.response) {
             const respData = o.request.response;
+            if (req.responseType === "arraybuffer") {
+              respData.raw = Buffer.from(respData.raw);
+            }
+
             resp = new Response(
               req,
               respData.url,

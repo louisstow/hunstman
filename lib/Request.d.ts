@@ -24,6 +24,7 @@ declare class Request {
     state: RequestState;
     cancelToken: CancelTokenSource;
     response: Response | null;
+    responseType: "text" | "arraybuffer";
     proxy: string | false;
     timeout: number;
     error: AxiosError | null;
@@ -37,6 +38,7 @@ declare class Request {
     setHeader(key: string, value: string): void;
     setProxy(proxy: string): void;
     setTimeout(ms: number): void;
+    setResponseType(type: "text" | "arraybuffer"): void;
     cancel(): void;
     duration(): number | null;
     reset(): void;

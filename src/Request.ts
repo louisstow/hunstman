@@ -31,6 +31,7 @@ class Request {
   state: RequestState;
   cancelToken: CancelTokenSource;
   response: Response | null;
+  responseType: "text" | "arraybuffer" = "text";
   proxy: string | false = false;
   timeout: number = 0;
   error: AxiosError | null = null;
@@ -75,6 +76,10 @@ class Request {
     this.timeout = ms;
   }
 
+  public setResponseType(type: "text" | "arraybuffer") {
+    this.responseType = type;
+  }
+
   public cancel() {
     this.state = RequestState.CANCELLED;
     this.cancelToken.cancel();
@@ -103,6 +108,7 @@ class Request {
       meta: { ...this.meta },
       method: this.method,
       data: this.data,
+      responseType: this.responseType,
       response: this.response?.serialize(),
     };
   }
@@ -110,7 +116,7 @@ class Request {
   public setResponse(resp: AxiosResponse): Response {
     const r = new Response(
       this,
-      resp?.request?.responseURL,
+      resp.request?.res?.responseUrl || this.url,
       resp.status,
       resp.statusText,
       resp.headers,
@@ -130,7 +136,7 @@ class Request {
       method: this.method,
       data: this.data,
       headers: this.headers,
-      responseType: "text",
+      responseType: this.responseType,
       transformResponse: [nop],
       cancelToken: this.cancelToken.token,
       timeout: this.timeout,
