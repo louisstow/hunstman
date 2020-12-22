@@ -26,7 +26,6 @@ const DEFAULT_MAX_REQUESTS = 50;
 const DEFAULT_TIMEOUT = 10000;
 
 type Requestable = Queue | Request | Array<Request>;
-type Resolver = (value: Response[]) => void;
 
 class Spider extends EventEmitter {
   name: string;
@@ -36,8 +35,6 @@ class Spider extends EventEmitter {
   settings: Settings;
   logger: Log;
   results: Array<Response>;
-
-  doneResolver: Resolver;
 
   constructor(
     name: string,
@@ -60,7 +57,6 @@ class Spider extends EventEmitter {
     this.state = SpiderState.IDLE;
     this.middleware = [];
     this.results = [];
-    this.doneResolver = () => {};
 
     // global middleware from settings
     if (this.settings.get("middleware", false)) {
@@ -87,9 +83,9 @@ class Spider extends EventEmitter {
     this.state = SpiderState.PAUSED;
   }
 
-  resume() {
+  async resume() {
     this.state = SpiderState.CRAWLING;
-    this.startCrawl(this.doneResolver);
+    await this.crawlNextItems();
   }
 
   cancel() {
@@ -107,7 +103,6 @@ class Spider extends EventEmitter {
 
   reset() {
     this.state = SpiderState.IDLE;
-    this.doneResolver = () => {};
 
     this.queue.forEach((item) => {
       item.state = QueueItemState.READY;
@@ -148,8 +143,6 @@ class Spider extends EventEmitter {
   private handleSpiderFinished() {
     this.state = SpiderState.DONE;
     this.emit(SpiderEvents.DONE, this.results);
-
-    this.doneResolver(this.results);
   }
 
   private checkSpiderFinished() {
@@ -160,7 +153,7 @@ class Spider extends EventEmitter {
     }
   }
 
-  private runNextItem() {
+  private async crawlNextItems() {
     if (
       this.state === SpiderState.CANCELLED ||
       this.state === SpiderState.PAUSED
@@ -182,7 +175,7 @@ class Spider extends EventEmitter {
       return;
     }
 
-    buffer.forEach((item) => this.runQueueItem(item));
+    await Promise.all(buffer.map((item) => this.runQueueItem(item)));
   }
 
   private async runRequestMiddleware(item: QueueItem) {
@@ -249,15 +242,10 @@ class Spider extends EventEmitter {
     }
 
     this.emit(SpiderEvents.REQUEST_DONE, item);
-    this.runNextItem();
+    await this.crawlNextItems();
   }
 
-  private startCrawl(resolve: Resolver) {
-    this.doneResolver = resolve;
-    this.runNextItem();
-  }
-
-  run(queue?: Requestable): Promise<Response[]> {
+  async run(queue?: Requestable): Promise<Response[]> {
     if (this.state === SpiderState.CRAWLING) {
       throw new Error("Spider is already running");
     }
@@ -275,7 +263,9 @@ class Spider extends EventEmitter {
 
     this.state = SpiderState.CRAWLING;
 
-    return new Promise<Response[]>(this.startCrawl.bind(this));
+    await this.crawlNextItems();
+
+    return this.results;
   }
 }
 

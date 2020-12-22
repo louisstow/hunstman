@@ -1,22 +1,35 @@
 import fs from "fs";
+import path from "path";
+
 import { Spider, SpiderEvents, SpiderState } from "./Spider";
 import { Response } from "./Response";
 import { QueueItem, Queue } from "./Queue";
+import { Settings } from "./Settings";
 
-const loadCache = (key: string): Queue | null => {
+const loadCache = (key: string, settings: Settings): Queue | null => {
   try {
-    const data = JSON.parse(fs.readFileSync(`.${key}.cache`).toString());
+    const cachePath = settings.get("cachePath", "");
+    const data = JSON.parse(
+      fs.readFileSync(path.join(cachePath, `.${key}.cache`)).toString()
+    );
     const out = Queue.deserialize(data);
 
     return out;
   } catch (err) {
+    console.warn(`Could not load from cache: ${key}`);
     return null;
   }
 };
 
-const saveCache = (key: string, queue: Queue) => {
-  const d = JSON.stringify(queue.serialize());
-  fs.writeFileSync(`.${key}.cache`, d);
+const saveCache = (key: string, queue: Queue, settings: Settings) => {
+  const cachePath = settings.get("cachePath", "");
+
+  try {
+    const d = JSON.stringify(queue.serialize());
+    fs.writeFileSync(path.join(cachePath, `.${key}.cache`), d);
+  } catch (err) {
+    console.warn(`Could not save to cache: ${key}`);
+  }
 };
 
 const cache = (
@@ -27,11 +40,11 @@ const cache = (
     return spider;
   }
 
-  const data = loadCache(spider.name);
+  const data = loadCache(spider.name, spider.settings);
 
   if (!data) {
     spider.once(SpiderEvents.DONE, () => {
-      saveCache(spider.name, spider.queue);
+      saveCache(spider.name, spider.queue, spider.settings);
     });
 
     return spider;

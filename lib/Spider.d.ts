@@ -21,7 +21,6 @@ declare enum SpiderEvents {
     REQUEST_DONE = "requestDone"
 }
 declare type Requestable = Queue | Request | Array<Request>;
-declare type Resolver = (value: Response[]) => void;
 declare class Spider extends EventEmitter {
     name: string;
     queue: Queue;
@@ -30,12 +29,11 @@ declare class Spider extends EventEmitter {
     settings: Settings;
     logger: Log;
     results: Array<Response>;
-    doneResolver: Resolver;
     constructor(name: string, queue?: Requestable, settings?: Settings, logger?: Logger);
     setQueue(queue: Requestable): void;
     addMiddleware(middleware: Middleware): void;
     pause(): void;
-    resume(): void;
+    resume(): Promise<void>;
     cancel(): void;
     reset(): void;
     purge(): void;
@@ -43,11 +41,10 @@ declare class Spider extends EventEmitter {
     private skipQueueItem;
     private handleSpiderFinished;
     private checkSpiderFinished;
-    private runNextItem;
+    private crawlNextItems;
     private runRequestMiddleware;
     private runResponseMiddleware;
     private runQueueItem;
-    private startCrawl;
     run(queue?: Requestable): Promise<Response[]>;
 }
 export { Spider, SpiderEvents, SpiderState };
