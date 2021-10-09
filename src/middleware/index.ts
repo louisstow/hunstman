@@ -6,3 +6,4 @@ export { RetryMiddleware } from "./RetryMiddleware";
 export { ProxyListMiddleware } from "./ProxyListMiddleware";
 export { DebugMiddleware } from "./DebugMiddleware";
 export { CacheBustMiddleware } from "./CacheBustMiddleware";
+export { ThrottleMiddleware } from "./ThrottleMiddleware";

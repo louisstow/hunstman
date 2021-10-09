@@ -5,9 +5,9 @@ class DelayMiddleware extends Middleware {
   delay: number;
   variance: number = 0.5; // randomly + or - this as a % of delay
 
-  constructor(delay?: number, variance?: number) {
+  constructor(delayMs?: number, variance?: number) {
     super();
-    this.delay = delay || 100;
+    this.delay = delayMs || 100;
     if (variance !== undefined) {
       this.variance = variance;
     }

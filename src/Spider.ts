@@ -165,6 +165,7 @@ class Spider extends EventEmitter {
       "maxRequests",
       DEFAULT_MAX_REQUESTS
     ) as number;
+
     const inUse = this.queue.countInUse();
     const reserve = Math.max(maxRequests - inUse, 0);
 
@@ -175,13 +176,13 @@ class Spider extends EventEmitter {
       return;
     }
 
-    await Promise.all(buffer.map((item) => this.runQueueItem(item)));
+    await Promise.all(buffer.map((item, i) => this.runQueueItem(item, i)));
   }
 
-  private async runRequestMiddleware(item: QueueItem) {
+  private async runRequestMiddleware(item: QueueItem, bufferIndex: number) {
     let r: Request | null = item.request;
     for (let i = 0; i < this.middleware.length; ++i) {
-      r = await this.middleware[i].processRequest(r, this);
+      r = await this.middleware[i].processRequest(r, this, bufferIndex);
 
       // exit immediately on null
       if (r === null) {
@@ -203,11 +204,12 @@ class Spider extends EventEmitter {
     return true;
   }
 
-  private async runQueueItem(item: QueueItem) {
-    const req = await this.runRequestMiddleware(item);
+  private async runQueueItem(item: QueueItem, bufferIndex: number) {
+    const req = await this.runRequestMiddleware(item, bufferIndex);
 
     if (req === null) {
       this.skipQueueItem(item);
+      await this.crawlNextItems();
       return;
     }
 
@@ -228,6 +230,7 @@ class Spider extends EventEmitter {
         this.emit(SpiderEvents.RESPONSE, resp, item);
       }
     } catch (err) {
+      item.state = QueueItemState.FINISHED;
       if (this.state === SpiderState.CANCELLED) {
         return;
       }
@@ -236,7 +239,6 @@ class Spider extends EventEmitter {
         this.results[item.index] = item.request.response;
       }
 
-      item.state = QueueItemState.FINISHED;
       await this.runResponseMiddleware(item);
       this.emit(SpiderEvents.ERROR, err, item);
     }
