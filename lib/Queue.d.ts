@@ -22,6 +22,7 @@ declare class Queue {
     countRemainingItems(): number;
     countFinishedItems(): number;
     forEach(fn: (value: QueueItem, index: number) => void): void;
+    getDebugState(): string;
     serialize(): object[];
     static deserialize(obj: object[]): Queue;
     static empty(): Queue;

@@ -4,9 +4,11 @@ import axios, {
   AxiosRequestConfig,
   AxiosResponse,
 } from "axios";
-import { Response } from "./Response";
 
 import ProxyAgent from "proxy-agent";
+import { EventEmitter } from "events";
+
+import { Response } from "./Response";
 
 const CancelToken = axios.CancelToken;
 const nop = (data: any) => data;
@@ -22,10 +24,10 @@ enum RequestState {
 
 type Method = "GET" | "POST";
 
-class Request {
+class Request extends EventEmitter {
   url: string;
   method: Method;
-  meta: { [k: string]: any };
+  meta: { [k: string]: unknown };
   headers: { [h: string]: string };
   data: { [k: string]: any } | undefined;
   state: RequestState;
@@ -44,6 +46,8 @@ class Request {
     method: Method = "GET",
     data: { [k: string]: any } | undefined = undefined
   ) {
+    super();
+
     this.url = url;
     this.meta = {};
     this.headers = {};
@@ -56,12 +60,12 @@ class Request {
     this.endTime = null;
   }
 
-  public setMeta(key: string, value: any) {
+  public setMeta<T>(key: string, value: T) {
     this.meta[key] = value;
   }
 
-  public getMeta(key: string) {
-    return this.meta[key];
+  public getMeta<T>(key: string): T {
+    return this.meta[key] as T;
   }
 
   public setHeader(key: string, value: string) {

@@ -90,6 +90,20 @@ class Queue {
     this.queue.forEach(fn);
   }
 
+  getDebugState() {
+    const logs: string[] = [];
+    this.forEach((item, i) => {
+      logs.push(
+        `${i}\t${QueueItemState[item.state]}\t${item.request.url.substr(
+          0,
+          220
+        )}`
+      );
+    });
+
+    return logs.join("\n");
+  }
+
   serialize(): object[] {
     return this.queue.map((item) => ({
       index: item.index,

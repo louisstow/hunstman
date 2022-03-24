@@ -26,8 +26,9 @@ const DEFAULT_MAX_REQUESTS = 50;
 const DEFAULT_TIMEOUT = 10000;
 
 type Requestable = Queue | Request | Array<Request>;
+type CallbackFunction = (...args: any[]) => Promise<void>;
 
-class Spider extends EventEmitter {
+class Spider {
   name: string;
   queue: Queue;
   state: SpiderState;
@@ -35,6 +36,17 @@ class Spider extends EventEmitter {
   settings: Settings;
   logger: Log;
   results: Array<Response>;
+  handlers: { [k: string]: CallbackFunction[] };
+  handlerPromises: Array<Promise<void>>;
+
+  stats: {
+    numSuccessfulRequests: number;
+    numFailedRequests: number;
+    numRequests: number;
+    lastRequestTime: number;
+    startSpiderTime: number;
+    endSpiderTime: number;
+  };
 
   constructor(
     name: string,
@@ -42,8 +54,6 @@ class Spider extends EventEmitter {
     settings?: Settings,
     logger?: Logger
   ) {
-    super();
-
     this.name = name;
     this.queue = Queue.empty();
 
@@ -57,6 +67,17 @@ class Spider extends EventEmitter {
     this.state = SpiderState.IDLE;
     this.middleware = [];
     this.results = [];
+    this.handlers = {};
+    this.handlerPromises = [];
+
+    this.stats = {
+      numSuccessfulRequests: 0,
+      numFailedRequests: 0,
+      numRequests: 0,
+      lastRequestTime: 0,
+      startSpiderTime: 0,
+      endSpiderTime: 0,
+    };
 
     // global middleware from settings
     if (this.settings.get("middleware", false)) {
@@ -108,6 +129,8 @@ class Spider extends EventEmitter {
       item.state = QueueItemState.READY;
       item.request.reset();
     });
+
+    this.handlerPromises.length = 0;
   }
 
   purge() {
@@ -119,6 +142,36 @@ class Spider extends EventEmitter {
     });
 
     this.queue.clearFinished();
+  }
+
+  emit(event: SpiderEvents, ...args: any) {
+    const fns = this.handlers[event] || [];
+    for (const f of fns) {
+      this.handlerPromises.push(f(...args));
+    }
+  }
+
+  on(event: SpiderEvents, cb: CallbackFunction) {
+    if (!this.handlers[event]) {
+      this.handlers[event] = [];
+    }
+
+    this.handlers[event].push(cb);
+  }
+
+  off(event: SpiderEvents, cb: CallbackFunction) {
+    const fns = this.handlers[event] || [];
+    const index = fns.indexOf(cb);
+    if (index > -1) {
+      this.handlers[event].splice(index, 1);
+    }
+  }
+
+  once(event: SpiderEvents, cb: CallbackFunction) {
+    this.on(event, async () => {
+      this.off(event, cb);
+      await cb();
+    });
   }
 
   private applySettingsToQueueRequests() {
@@ -150,7 +203,10 @@ class Spider extends EventEmitter {
 
     if (remaining === 0) {
       this.handleSpiderFinished();
+      return true;
     }
+
+    return false;
   }
 
   private async crawlNextItems() {
@@ -228,6 +284,8 @@ class Spider extends EventEmitter {
       if (passes && resp) {
         this.results[item.index] = resp;
         this.emit(SpiderEvents.RESPONSE, resp, item);
+        req.emit(SpiderEvents.REQUEST_DONE, resp, item);
+        this.stats.numSuccessfulRequests++;
       }
     } catch (err) {
       item.state = QueueItemState.FINISHED;
@@ -241,15 +299,22 @@ class Spider extends EventEmitter {
 
       await this.runResponseMiddleware(item);
       this.emit(SpiderEvents.ERROR, err, item);
+      req.emit(SpiderEvents.ERROR, err, item);
+      this.stats.numFailedRequests++;
     }
 
     this.emit(SpiderEvents.REQUEST_DONE, item);
+    req.emit(SpiderEvents.REQUEST_DONE, item);
+    this.stats.lastRequestTime = Date.now();
+    this.stats.numRequests++;
+
     await this.crawlNextItems();
   }
 
   async run(queue?: Requestable): Promise<Response[]> {
     if (this.state === SpiderState.CRAWLING) {
-      throw new Error("Spider is already running");
+      const debugState = this.queue.getDebugState();
+      throw new Error(`${this.name} is already running:\n${debugState}`);
     }
 
     // if a requestable is passed in, override our queue
@@ -264,8 +329,14 @@ class Spider extends EventEmitter {
     this.applySettingsToQueueRequests();
 
     this.state = SpiderState.CRAWLING;
+    this.stats.startSpiderTime = Date.now();
 
     await this.crawlNextItems();
+
+    this.stats.endSpiderTime = Date.now();
+
+    await Promise.allSettled(this.handlerPromises);
+    this.handlerPromises.length = 0;
 
     return this.results;
   }

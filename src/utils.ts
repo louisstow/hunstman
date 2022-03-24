@@ -43,7 +43,7 @@ const cache = (
   const data = loadCache(spider.name, spider.settings);
 
   if (!data) {
-    spider.once(SpiderEvents.DONE, () => {
+    spider.once(SpiderEvents.DONE, async () => {
       saveCache(spider.name, spider.queue, spider.settings);
     });
 
@@ -74,6 +74,9 @@ const cache = (
       }
 
       spider.emit(SpiderEvents.DONE, spider.results);
+
+      await Promise.allSettled(spider.handlerPromises);
+
       return spider.results;
     },
   };

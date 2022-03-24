@@ -15,9 +15,13 @@ class ThrottleMiddleware extends Middleware {
     spider: Spider,
     bufferIndex: number
   ): Promise<Request> {
-    const delay = this.spacing * bufferIndex;
+    const diff = Date.now() - spider.stats.lastRequestTime;
+    const delay = Math.max(this.spacing - diff, 0) * bufferIndex;
+
     return new Promise((resolve) => {
-      setTimeout(() => resolve(r), delay);
+      setTimeout(() => {
+        resolve(r);
+      }, delay);
     });
   }
 }

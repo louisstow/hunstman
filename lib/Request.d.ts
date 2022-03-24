@@ -1,4 +1,6 @@
+/// <reference types="node" />
 import { CancelTokenSource, AxiosError, AxiosResponse } from "axios";
+import { EventEmitter } from "events";
 import { Response } from "./Response";
 declare enum RequestState {
     WAITING = 0,
@@ -9,11 +11,11 @@ declare enum RequestState {
     SKIPPED = 5
 }
 declare type Method = "GET" | "POST";
-declare class Request {
+declare class Request extends EventEmitter {
     url: string;
     method: Method;
     meta: {
-        [k: string]: any;
+        [k: string]: unknown;
     };
     headers: {
         [h: string]: string;
@@ -33,8 +35,8 @@ declare class Request {
     constructor(url: string, method?: Method, data?: {
         [k: string]: any;
     } | undefined);
-    setMeta(key: string, value: any): void;
-    getMeta(key: string): any;
+    setMeta<T>(key: string, value: T): void;
+    getMeta<T>(key: string): T;
     setHeader(key: string, value: string): void;
     setProxy(proxy: string): void;
     setTimeout(ms: number): void;

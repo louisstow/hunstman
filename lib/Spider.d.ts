@@ -1,10 +1,8 @@
-/// <reference types="node" />
 import { Queue } from "./Queue";
 import { Request } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
-import { EventEmitter } from "events";
 import { Log, Logger } from "./Log";
 declare enum SpiderState {
     IDLE = 0,
@@ -21,7 +19,8 @@ declare enum SpiderEvents {
     REQUEST_DONE = "requestDone"
 }
 declare type Requestable = Queue | Request | Array<Request>;
-declare class Spider extends EventEmitter {
+declare type CallbackFunction = (...args: any[]) => Promise<void>;
+declare class Spider {
     name: string;
     queue: Queue;
     state: SpiderState;
@@ -29,6 +28,18 @@ declare class Spider extends EventEmitter {
     settings: Settings;
     logger: Log;
     results: Array<Response>;
+    handlers: {
+        [k: string]: CallbackFunction[];
+    };
+    handlerPromises: Array<Promise<void>>;
+    stats: {
+        numSuccessfulRequests: number;
+        numFailedRequests: number;
+        numRequests: number;
+        lastRequestTime: number;
+        startSpiderTime: number;
+        endSpiderTime: number;
+    };
     constructor(name: string, queue?: Requestable, settings?: Settings, logger?: Logger);
     setQueue(queue: Requestable): void;
     addMiddleware(middleware: Middleware): void;
@@ -37,6 +48,10 @@ declare class Spider extends EventEmitter {
     cancel(): void;
     reset(): void;
     purge(): void;
+    emit(event: SpiderEvents, ...args: any): void;
+    on(event: SpiderEvents, cb: CallbackFunction): void;
+    off(event: SpiderEvents, cb: CallbackFunction): void;
+    once(event: SpiderEvents, cb: CallbackFunction): void;
     private applySettingsToQueueRequests;
     private skipQueueItem;
     private handleSpiderFinished;

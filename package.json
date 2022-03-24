@@ -22,6 +22,5 @@
     "jest": "^26.4.2",
     "jest-mock-axios": "^4.2.1",
     "ts-jest": "^26.3.0"
-  },
-  "peerDependencies": {}
+  }
 }

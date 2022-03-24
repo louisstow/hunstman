@@ -25,7 +25,7 @@ class Settings {
   }
 
   loadConfig(configPath?: string): boolean {
-    const p = configPath || path.resolve(process.cwd(), "hunstman.config.json");
+    const p = configPath || path.resolve(process.cwd(), "huntsman.config.json");
     let config: SettingsKeyVal;
 
     try {
