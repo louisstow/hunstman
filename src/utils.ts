@@ -75,7 +75,7 @@ const cache = (
 
       spider.emit(SpiderEvents.DONE, spider.results);
 
-      await Promise.allSettled(spider.handlerPromises);
+      await Promise.all(spider.handlerPromises);
 
       return spider.results;
     },

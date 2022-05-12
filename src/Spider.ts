@@ -335,7 +335,7 @@ class Spider {
 
     this.stats.endSpiderTime = Date.now();
 
-    await Promise.allSettled(this.handlerPromises);
+    await Promise.all(this.handlerPromises);
     this.handlerPromises.length = 0;
 
     return this.results;

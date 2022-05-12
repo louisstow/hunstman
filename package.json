@@ -1,6 +1,6 @@
 {
-  "name": "huntsman",
-  "version": "1.0.0",
+  "name": "@signals.to/huntsman",
+  "version": "1.0.1",
   "description": "An unobtrusive library for scraping",
   "main": "lib/index.js",
   "scripts": {
