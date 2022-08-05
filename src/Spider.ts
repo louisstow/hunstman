@@ -3,7 +3,7 @@ import { Request, RequestState } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
-import { EventEmitter } from "events";
+import { ResponseError } from "./Error";
 import { Log, Logger } from "./Log";
 
 enum SpiderState {
@@ -144,7 +144,38 @@ class Spider {
     this.queue.clearFinished();
   }
 
+  async executeResponseHandler(
+    f: CallbackFunction,
+    response: Response,
+    item: QueueItem
+  ) {
+    try {
+      await f(item);
+    } catch (err) {
+      if (err instanceof Error) {
+        throw ResponseError.fromError(
+          err,
+          response.request.url,
+          response.status
+        );
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  emitResponse(response: Response, item: QueueItem) {
+    const fns = this.handlers[SpiderEvents.RESPONSE] || [];
+    for (const f of fns) {
+      this.handlerPromises.push(this.executeResponseHandler(f, response, item));
+    }
+  }
+
   emit(event: SpiderEvents, ...args: any) {
+    if (event === SpiderEvents.RESPONSE) {
+      return this.emitResponse(args[0], args[1]);
+    }
+
     const fns = this.handlers[event] || [];
     for (const f of fns) {
       this.handlerPromises.push(f(...args));

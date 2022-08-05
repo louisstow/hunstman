@@ -6,7 +6,7 @@ import cheerio from "cheerio";
 class CheerioMiddleware extends Middleware {
   isXML: boolean = false;
 
-  constructor(options: { isXML: boolean }) {
+  constructor(options: { isXML: boolean } = { isXML: false }) {
     super();
     this.isXML = options.isXML || false;
   }

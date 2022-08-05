@@ -1,4 +1,4 @@
-import { Queue } from "./Queue";
+import { Queue, QueueItem } from "./Queue";
 import { Request } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
@@ -48,6 +48,8 @@ declare class Spider {
     cancel(): void;
     reset(): void;
     purge(): void;
+    executeResponseHandler(f: CallbackFunction, response: Response, item: QueueItem): Promise<void>;
+    emitResponse(response: Response, item: QueueItem): void;
     emit(event: SpiderEvents, ...args: any): void;
     on(event: SpiderEvents, cb: CallbackFunction): void;
     off(event: SpiderEvents, cb: CallbackFunction): void;

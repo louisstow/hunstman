@@ -12,6 +12,8 @@ export { Settings } from "./Settings";
 
 export { Spider, SpiderEvents, SpiderState } from "./Spider";
 
+export { ResponseError } from "./Error";
+
 import * as middleware from "./middleware/index";
 export { middleware };
 
