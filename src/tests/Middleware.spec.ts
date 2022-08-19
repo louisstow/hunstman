@@ -7,7 +7,7 @@ import { Response } from "../Response";
 import { simulateRequest } from "./request.util";
 
 test("Process request middleware", (done) => {
-  const requests = [];
+  const requests: Request[] = [];
   const N = 10;
   const UA = "Mozilla";
 
@@ -56,7 +56,7 @@ test("Process request middleware", (done) => {
 
   let req_count = 0;
 
-  s.on(SpiderEvents.REQUEST_DONE, (item: QueueItem) => {
+  s.on(SpiderEvents.REQUEST_DONE, async (item: QueueItem) => {
     expect(item.request.headers["User-Agent"]).toBe(UA);
     const deltaTime = Date.now() - start;
     expect(deltaTime).toBeGreaterThanOrEqual(200);
@@ -64,7 +64,7 @@ test("Process request middleware", (done) => {
     req_count++;
   });
 
-  s.on(SpiderEvents.SKIP, (item: QueueItem) => {
+  s.on(SpiderEvents.SKIP, async (item: QueueItem) => {
     expect(item.request.url).toBe("n:1");
   });
 
@@ -75,7 +75,7 @@ test("Process request middleware", (done) => {
 });
 
 test("Process response middleware", (done) => {
-  const requests = [];
+  const requests: Request[] = [];
   const N = 4;
 
   const jsonMiddleware = new Middleware();
@@ -123,7 +123,7 @@ test("Process response middleware", (done) => {
   const p = s.run();
   let req_count = 0;
 
-  s.on(SpiderEvents.RESPONSE, (out: Response) => {
+  s.on(SpiderEvents.RESPONSE, async (out: Response) => {
     expect(typeof out.data.id).toBe("number");
     req_count++;
   });

@@ -20,7 +20,7 @@ test("Basic request functions", () => {
   expect(r.state).toBe(RequestState.CANCELLED);
 
   expect(JSON.stringify(r.serialize())).toBe(
-    '{"url":"test","headers":{"User-Agent":"Mozilla"},"meta":{"randomKey":42},"method":"GET"}'
+    '{"url":"test","headers":{"User-Agent":"Mozilla"},"meta":{"randomKey":42},"method":"GET","responseType":"text"}'
   );
 
   r.reset();

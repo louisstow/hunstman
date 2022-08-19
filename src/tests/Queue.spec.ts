@@ -74,7 +74,7 @@ test("Queue serialization and deserialization", () => {
 
   const serial = JSON.stringify(q.serialize());
   expect(serial).toBe(
-    '[{"index":0,"request":{"url":"test1","headers":{},"meta":{},"method":"GET"}}]'
+    '[{"index":0,"request":{"url":"test1","headers":{},"meta":{},"method":"GET","responseType":"text"}}]'
   );
 
   const deserial = [

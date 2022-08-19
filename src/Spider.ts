@@ -38,6 +38,7 @@ class Spider {
   results: Array<Response>;
   handlers: { [k: string]: CallbackFunction[] };
   handlerPromises: Array<Promise<void>>;
+  doneResolver: () => void;
 
   stats: {
     numSuccessfulRequests: number;
@@ -69,6 +70,7 @@ class Spider {
     this.results = [];
     this.handlers = {};
     this.handlerPromises = [];
+    this.doneResolver = () => {};
 
     this.stats = {
       numSuccessfulRequests: 0,
@@ -98,6 +100,14 @@ class Spider {
 
   addMiddleware(middleware: Middleware) {
     this.middleware.push(middleware);
+  }
+
+  removeMiddleware(index: number) {
+    this.middleware.splice(index, 1);
+  }
+
+  replaceMiddleware(index: number, middleware: Middleware) {
+    this.middleware[index] = middleware;
   }
 
   pause() {
@@ -150,7 +160,7 @@ class Spider {
     item: QueueItem
   ) {
     try {
-      await f(item);
+      await f(response, item);
     } catch (err) {
       if (err instanceof Error) {
         throw ResponseError.fromError(
@@ -164,22 +174,20 @@ class Spider {
     }
   }
 
-  emitResponse(response: Response, item: QueueItem) {
+  async emitResponse(response: Response, item: QueueItem) {
     const fns = this.handlers[SpiderEvents.RESPONSE] || [];
-    for (const f of fns) {
-      this.handlerPromises.push(this.executeResponseHandler(f, response, item));
-    }
+    await Promise.all(
+      fns.map((f) => this.executeResponseHandler(f, response, item))
+    );
   }
 
-  emit(event: SpiderEvents, ...args: any) {
+  async emit(event: SpiderEvents, ...args: any) {
     if (event === SpiderEvents.RESPONSE) {
       return this.emitResponse(args[0], args[1]);
     }
 
     const fns = this.handlers[event] || [];
-    for (const f of fns) {
-      this.handlerPromises.push(f(...args));
-    }
+    await Promise.all(fns.map((f) => f(...args)));
   }
 
   on(event: SpiderEvents, cb: CallbackFunction) {
@@ -227,6 +235,8 @@ class Spider {
   private handleSpiderFinished() {
     this.state = SpiderState.DONE;
     this.emit(SpiderEvents.DONE, this.results);
+
+    this.doneResolver();
   }
 
   private checkSpiderFinished() {
@@ -293,6 +303,8 @@ class Spider {
 
   private async runQueueItem(item: QueueItem, bufferIndex: number) {
     const req = await this.runRequestMiddleware(item, bufferIndex);
+    let resp: Response | null = null;
+    let passes = false;
 
     if (req === null) {
       this.skipQueueItem(item);
@@ -301,7 +313,7 @@ class Spider {
     }
 
     try {
-      const resp = await req.run();
+      resp = await req.run();
       item.state = QueueItemState.FINISHED;
 
       // do not trigger or continue processing if
@@ -310,14 +322,7 @@ class Spider {
         return;
       }
 
-      const passes = await this.runResponseMiddleware(item);
-
-      if (passes && resp) {
-        this.results[item.index] = resp;
-        this.emit(SpiderEvents.RESPONSE, resp, item);
-        req.emit(SpiderEvents.REQUEST_DONE, resp, item);
-        this.stats.numSuccessfulRequests++;
-      }
+      passes = await this.runResponseMiddleware(item);
     } catch (err) {
       item.state = QueueItemState.FINISHED;
       if (this.state === SpiderState.CANCELLED) {
@@ -329,9 +334,21 @@ class Spider {
       }
 
       await this.runResponseMiddleware(item);
-      this.emit(SpiderEvents.ERROR, err, item);
+      await this.emit(SpiderEvents.ERROR, err, item);
       req.emit(SpiderEvents.ERROR, err, item);
       this.stats.numFailedRequests++;
+    }
+
+    if (passes && resp) {
+      this.results[item.index] = resp;
+      this.stats.numSuccessfulRequests++;
+
+      try {
+        await this.emitResponse(resp, item);
+      } catch (err) {
+        await this.emit(SpiderEvents.ERROR, err, item);
+        req.emit(SpiderEvents.ERROR, err, item);
+      }
     }
 
     this.emit(SpiderEvents.REQUEST_DONE, item);
@@ -362,12 +379,21 @@ class Spider {
     this.state = SpiderState.CRAWLING;
     this.stats.startSpiderTime = Date.now();
 
+    // create empty promise that will be resolved when the spider is done
+    const donePromise = new Promise<void>(
+      (resolve) => (this.doneResolver = resolve)
+    );
+
     await this.crawlNextItems();
 
     this.stats.endSpiderTime = Date.now();
 
+    // wait for async handlers
     await Promise.all(this.handlerPromises);
     this.handlerPromises.length = 0;
+
+    // wait for the queue items to signal done
+    await donePromise;
 
     return this.results;
   }
