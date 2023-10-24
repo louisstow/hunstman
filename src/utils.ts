@@ -75,11 +75,13 @@ const cache = (
 
       spider.emit(SpiderEvents.DONE, spider.results);
 
-      await Promise.all(spider.handlerPromises);
-
       return spider.results;
     },
   };
 };
 
-export { cache };
+function asyncTimeout(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export { cache, asyncTimeout };

@@ -31,7 +31,7 @@ class Settings {
     try {
       config = JSON.parse(fs.readFileSync(p).toString());
     } catch (err) {
-      console.log(
+      console.warn(
         `Unable to read huntsman.config.json in working directory (${p})`
       );
 

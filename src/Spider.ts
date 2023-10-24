@@ -5,6 +5,7 @@ import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
 import { ResponseError } from "./Error";
 import { Log, Logger } from "./Log";
+import { asyncTimeout } from "./utils";
 
 enum SpiderState {
   IDLE,
@@ -37,8 +38,6 @@ class Spider {
   logger: Log;
   results: Array<Response>;
   handlers: { [k: string]: CallbackFunction[] };
-  handlerPromises: Array<Promise<void>>;
-  doneResolver: () => void;
 
   stats: {
     numSuccessfulRequests: number;
@@ -63,14 +62,15 @@ class Spider {
     }
 
     this.settings = settings || new Settings();
-    this.logger = new Log(`[${this.name}]`, logger);
+    this.logger = new Log(
+      `[${this.name}]`,
+      logger || this.settings.get("logger")
+    );
 
     this.state = SpiderState.IDLE;
     this.middleware = [];
     this.results = [];
     this.handlers = {};
-    this.handlerPromises = [];
-    this.doneResolver = () => {};
 
     this.stats = {
       numSuccessfulRequests: 0,
@@ -114,9 +114,8 @@ class Spider {
     this.state = SpiderState.PAUSED;
   }
 
-  async resume() {
+  resume() {
     this.state = SpiderState.CRAWLING;
-    await this.crawlNextItems();
   }
 
   cancel() {
@@ -140,7 +139,7 @@ class Spider {
       item.request.reset();
     });
 
-    this.handlerPromises.length = 0;
+    this.results = [];
   }
 
   purge() {
@@ -235,8 +234,6 @@ class Spider {
   private handleSpiderFinished() {
     this.state = SpiderState.DONE;
     this.emit(SpiderEvents.DONE, this.results);
-
-    this.doneResolver();
   }
 
   private checkSpiderFinished() {
@@ -269,7 +266,6 @@ class Spider {
     const buffer = this.queue.buffer(reserve);
 
     if (buffer.length === 0) {
-      this.checkSpiderFinished();
       return;
     }
 
@@ -359,11 +355,23 @@ class Spider {
     await this.crawlNextItems();
   }
 
+  async crawl() {
+    await this.crawlNextItems();
+
+    if (!this.checkSpiderFinished()) {
+      await asyncTimeout(100);
+      await this.crawl();
+      return;
+    }
+  }
+
   async run(queue?: Requestable): Promise<Response[]> {
     if (this.state === SpiderState.CRAWLING) {
       const debugState = this.queue.getDebugState();
       throw new Error(`${this.name} is already running:\n${debugState}`);
     }
+
+    this.reset();
 
     // if a requestable is passed in, override our queue
     if (queue) {
@@ -379,21 +387,9 @@ class Spider {
     this.state = SpiderState.CRAWLING;
     this.stats.startSpiderTime = Date.now();
 
-    // create empty promise that will be resolved when the spider is done
-    const donePromise = new Promise<void>(
-      (resolve) => (this.doneResolver = resolve)
-    );
-
-    await this.crawlNextItems();
+    await this.crawl();
 
     this.stats.endSpiderTime = Date.now();
-
-    // wait for async handlers
-    await Promise.all(this.handlerPromises);
-    this.handlerPromises.length = 0;
-
-    // wait for the queue items to signal done
-    await donePromise;
 
     return this.results;
   }

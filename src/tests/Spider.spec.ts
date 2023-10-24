@@ -145,7 +145,6 @@ describe("Sync spider", () => {
 
     let req_count = 0;
     s.on(SpiderEvents.REQUEST_DONE, async (item: QueueItem) => {
-      // console.log("REQUEST DONE", item.index);
       if (item.request.state !== RequestState.CANCELLED) {
         req_count++;
       }
@@ -197,11 +196,14 @@ describe("Async Spiders", () => {
       s.pause();
       expect(s.queue.countFinishedItems()).toBe(0);
       expect(s.state).toBe(SpiderState.PAUSED);
+      console.log("PAUSED");
     }, 10);
 
     // check that the buffered were completed
     // and no more were dequeue'd
     setTimeout(() => {
+      console.log("RESUME");
+
       expect(s.queue.countFinishedItems()).toBe(setting.get("maxRequests"));
       expect(s.queue.countRemainingItems()).toBeLessThan(N);
       expect(s.results.length).toBeGreaterThan(1);
@@ -210,9 +212,101 @@ describe("Async Spiders", () => {
     }, 150);
 
     p.then((results) => {
+      console.log("DONE");
       expect(results.length).toBe(N);
       expect(onDone).toHaveBeenCalled();
       done();
     });
+  });
+});
+
+describe("Long living", () => {
+  test("rerun spiders", async () => {
+    const s = new Spider("rerun");
+    const firstRequests: Request[] = [];
+    const secondRequests: Request[] = [];
+    const N = 120;
+
+    for (let i = 0; i < N; ++i) {
+      const mockResponse = {
+        status: 200,
+        statusText: "OK",
+        data: `response ${i}`,
+        headers: { "X-ID": i },
+      };
+
+      firstRequests.push(simulateRequest(i, mockResponse));
+
+      if (i % 2 === 0) {
+        secondRequests.push(simulateRequest(i, mockResponse));
+      }
+    }
+
+    const r1 = await s.run(firstRequests);
+    expect(r1.length).toBe(N);
+    expect(s.state).toBe(SpiderState.DONE);
+
+    const r2 = await s.run(secondRequests);
+    expect(r2.length).toBe(N / 2);
+    expect(s.state).toBe(SpiderState.DONE);
+  });
+
+  test("error and rerun", async () => {
+    const s = new Spider("errors");
+    const requests: Request[] = [];
+    const N = 10;
+
+    for (let i = 0; i < N; ++i) {
+      const mockResponse = {
+        status: 200,
+        statusText: "OK",
+        data: `response ${i}`,
+        headers: { "X-ID": `${i}` },
+      };
+
+      let r: Request;
+
+      if (i % 2 !== 0) {
+        mockResponse.status = 400;
+        r = simulateRequest(i, mockResponse, -1, false);
+      } else {
+        r = simulateRequest(i, mockResponse);
+      }
+
+      requests.push(r);
+    }
+
+    let err_count = 0;
+    let resp_count = 0;
+
+    s.on(SpiderEvents.ERROR, async (err, item) => {
+      err_count++;
+    });
+
+    s.on(SpiderEvents.RESPONSE, async (resp, item) => {
+      resp_count++;
+      expect(resp).toBeInstanceOf(Response);
+      expect(item.state).toBe(QueueItemState.FINISHED);
+
+      throw new Error("Break");
+    });
+
+    const resp = await s.run(requests);
+    expect(resp.length).toBe(N);
+    expect(err_count).toBe(N);
+
+    const newRequest = simulateRequest(
+      0,
+      {
+        status: 200,
+        statusText: "OK",
+        data: `new response`,
+      },
+      -1
+    );
+
+    const r = await s.run([newRequest]);
+
+    expect(r.length).toBe(1);
   });
 });
