@@ -3,4 +3,5 @@ import { Response } from "./Response";
 declare const cache: (spider: Spider, skip?: boolean | undefined) => Spider | {
     run: (r?: any) => Promise<Response[]>;
 };
-export { cache };
+declare function asyncTimeout(ms: number): Promise<unknown>;
+export { cache, asyncTimeout };

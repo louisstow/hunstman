@@ -31,8 +31,6 @@ declare class Spider {
     handlers: {
         [k: string]: CallbackFunction[];
     };
-    handlerPromises: Array<Promise<void>>;
-    doneResolver: () => void;
     stats: {
         numSuccessfulRequests: number;
         numFailedRequests: number;
@@ -47,7 +45,7 @@ declare class Spider {
     removeMiddleware(index: number): void;
     replaceMiddleware(index: number, middleware: Middleware): void;
     pause(): void;
-    resume(): Promise<void>;
+    resume(): void;
     cancel(): void;
     reset(): void;
     purge(): void;
@@ -65,6 +63,7 @@ declare class Spider {
     private runRequestMiddleware;
     private runResponseMiddleware;
     private runQueueItem;
+    crawl(): Promise<void>;
     run(queue?: Requestable): Promise<Response[]>;
 }
 export { Spider, SpiderEvents, SpiderState };
