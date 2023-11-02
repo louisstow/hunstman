@@ -31,6 +31,9 @@ declare class Spider {
     handlers: {
         [k: string]: CallbackFunction[];
     };
+    numCompletions: number;
+    numTries: number;
+    history: string[];
     stats: {
         numSuccessfulRequests: number;
         numFailedRequests: number;
@@ -49,6 +52,7 @@ declare class Spider {
     cancel(): void;
     reset(): void;
     purge(): void;
+    pushHistory(msg: string): void;
     executeResponseHandler(f: CallbackFunction, response: Response, item: QueueItem): Promise<void>;
     emitResponse(response: Response, item: QueueItem): Promise<void>;
     emit(event: SpiderEvents, ...args: any): Promise<void>;

@@ -6,6 +6,12 @@ enum LogType {
 }
 
 class Logger {
+  prefix: string;
+
+  constructor(prefix: string) {
+    this.prefix = prefix;
+  }
+
   error(...args: any[]) {}
   warn(...args: any[]) {}
   info(...args: any[]) {}
@@ -14,55 +20,17 @@ class Logger {
 
 class ConsoleLogger extends Logger {
   error(...args: any[]) {
-    console.error(...args);
+    console.error(this.prefix, ...args);
   }
   warn(...args: any[]) {
-    console.warn(...args);
+    console.warn(this.prefix, ...args);
   }
   info(...args: any[]) {
-    console.info(...args);
+    console.info(this.prefix, ...args);
   }
   debug(...args: any[]) {
-    console.debug(...args);
+    console.debug(this.prefix, ...args);
   }
 }
 
-class Log {
-  prefix: string;
-  logger: Logger;
-
-  constructor(prefix: string, logger?: Logger) {
-    this.prefix = prefix;
-    this.logger = logger ?? new ConsoleLogger();
-  }
-
-  log(type: LogType, ...args: any[]) {
-    if (type === LogType.ERROR) {
-      this.logger.error(this.prefix, ...args);
-    } else if (type === LogType.WARN) {
-      this.logger.warn(this.prefix, ...args);
-    } else if (type === LogType.INFO) {
-      this.logger.info(this.prefix, ...args);
-    } else {
-      this.logger.debug(this.prefix, ...args);
-    }
-  }
-
-  info(...args: any[]) {
-    return this.log(LogType.INFO, ...args);
-  }
-
-  warn(...args: any[]) {
-    return this.log(LogType.WARN, ...args);
-  }
-
-  error(...args: any[]) {
-    return this.log(LogType.ERROR, ...args);
-  }
-
-  debug(...args: any[]) {
-    return this.log(LogType.DEBUG, ...args);
-  }
-}
-
-export { Log, Logger, LogType };
+export { ConsoleLogger, Logger, LogType };

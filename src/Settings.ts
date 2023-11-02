@@ -1,35 +1,44 @@
 import fs from "fs";
 import path from "path";
+import type { Middleware } from "Middleware";
+import type { Logger } from "Log";
 
-type SettingsKeyVal = { [k: string]: any };
-
-declare global {
-  namespace NodeJS {
-    interface Global {
-      HUNTSMAN_SETTINGS: SettingsKeyVal;
-    }
-  }
+enum Setting {
+  MAX_CONCURRENT_REQUESTS = "maxConcurrentRequests",
+  TIMEOUT = "timeout",
+  PROXY = "proxy",
+  MIDDLEWARE = "middleware",
+  LOGGER = "logger",
 }
 
-if (!global.HUNTSMAN_SETTINGS) {
-  global.HUNTSMAN_SETTINGS = {};
-}
+type KnownSettings = Partial<{
+  [Setting.MAX_CONCURRENT_REQUESTS]: number;
+  [Setting.TIMEOUT]: number;
+  [Setting.PROXY]: string;
+  [Setting.MIDDLEWARE]: Middleware[];
+  [Setting.LOGGER]: Logger;
+}>;
+
+type SpiderSettings = KnownSettings & { [k: string]: any };
+
+type SettingsKey = keyof KnownSettings;
 
 class Settings {
-  settings: SettingsKeyVal = {};
+  settings: SpiderSettings = {};
 
-  constructor() {
-    if (global.HUNTSMAN_SETTINGS) {
-      this.extend(global.HUNTSMAN_SETTINGS);
+  constructor(settings?: SpiderSettings) {
+    if (settings) {
+      this.extend(settings);
     }
   }
 
   loadConfig(configPath?: string): boolean {
     const p = configPath || path.resolve(process.cwd(), "huntsman.config.json");
-    let config: SettingsKeyVal;
+    let config: SpiderSettings;
 
     try {
       config = JSON.parse(fs.readFileSync(p).toString());
+      this.extend(config);
     } catch (err) {
       console.warn(
         `Unable to read huntsman.config.json in working directory (${p})`
@@ -38,23 +47,22 @@ class Settings {
       return false;
     }
 
-    this.extend(config);
     return true;
   }
 
-  get(setting: string, fallback: any = undefined): any {
+  get<T extends any>(setting: SettingsKey | string, fallback?: T): T {
     return setting in this.settings ? this.settings[setting] : fallback;
   }
 
-  set(setting: string, value: any) {
+  set(setting: SettingsKey | string, value: any) {
     this.settings[setting] = value;
   }
 
-  extend(settings: SettingsKeyVal) {
+  extend(settings: SpiderSettings) {
     for (const key in settings) {
       this.set(key, settings[key]);
     }
   }
 }
 
-export { Settings };
+export { Settings, SpiderSettings, Setting };

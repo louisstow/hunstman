@@ -3,6 +3,7 @@ import axios, {
   AxiosError,
   AxiosRequestConfig,
   AxiosResponse,
+  AxiosHeaders,
 } from "axios";
 
 import ProxyAgent from "proxy-agent";
@@ -123,7 +124,7 @@ class Request extends EventEmitter {
       resp.request?.res?.responseUrl || this.url,
       resp.status,
       resp.statusText,
-      resp.headers,
+      resp.headers as AxiosHeaders,
       resp.data,
       resp.data
     );

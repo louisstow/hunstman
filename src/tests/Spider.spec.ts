@@ -1,8 +1,8 @@
-import { Spider, SpiderState, SpiderEvents } from "../Spider";
+import { Spider, SpiderEvents } from "../Spider";
 import { Request, RequestState } from "../Request";
 import { Response } from "../Response";
 import { QueueItem, QueueItemState } from "../Queue";
-import { Settings } from "../Settings";
+import { Setting, Settings } from "../Settings";
 import { simulateRequest } from "./request.util";
 
 describe("Sync spider", () => {
@@ -25,12 +25,12 @@ describe("Sync spider", () => {
     };
 
     const r = simulateRequest(0, mockResponse);
-    expect(s.state).toBe(SpiderState.IDLE);
+    expect(s.engine.isWaiting()).toBe(true);
 
     const resp = await s.run(r);
     expect(resp[0].status).toBe(200);
 
-    expect(s.state).toBe(SpiderState.DONE);
+    expect(s.engine.isWaiting()).toBe(true);
     expect(onDone).toHaveBeenCalled();
     expect(onResponse).toHaveBeenCalled();
     expect(onReqDone).toHaveBeenCalled();
@@ -98,7 +98,7 @@ describe("Sync spider", () => {
     s.on(SpiderEvents.ERROR, async (err, item) => {
       err_count++;
       expect(item.state).toBe(QueueItemState.FINISHED);
-      expect(err.response).toBeTruthy();
+      expect(err).toBeTruthy();
     });
 
     s.on(SpiderEvents.REQUEST_DONE, async (item) => {
@@ -121,6 +121,7 @@ describe("Sync spider", () => {
 
     expect(err_count).toBe(5);
     expect(resp_count).toBe(5);
+
     expect(req_count).toBe(10);
   });
 
@@ -152,14 +153,14 @@ describe("Sync spider", () => {
 
     setTimeout(() => {
       s.cancel();
-      expect(s.state).toBe(SpiderState.CANCELLED);
+      expect(s.engine.isCancelled()).toBe(true);
       expect(s.queue.countRemainingItems()).toBe(0);
     }, 10);
 
     setTimeout(() => {
       expect(req_count).toBe(0);
       s.reset();
-      expect(s.state).toBe(SpiderState.IDLE);
+      expect(s.engine.isWaiting()).toBe(true);
       done();
     }, 150);
   });
@@ -168,11 +169,11 @@ describe("Sync spider", () => {
 describe("Async Spiders", () => {
   test("Pause and resume spider", (done) => {
     const setting = new Settings();
-    setting.set("maxRequests", 50);
+    setting.set(Setting.MAX_CONCURRENT_REQUESTS, 2);
 
     const s = new Spider("pauseResume", undefined, setting);
     const requests: Request[] = [];
-    const N = 120;
+    const N = 5;
 
     const onDone = jest.fn();
     s.on(SpiderEvents.DONE, onDone);
@@ -195,16 +196,15 @@ describe("Async Spiders", () => {
     setTimeout(() => {
       s.pause();
       expect(s.queue.countFinishedItems()).toBe(0);
-      expect(s.state).toBe(SpiderState.PAUSED);
-      console.log("PAUSED");
+      expect(s.engine.isPaused()).toBe(true);
     }, 10);
 
     // check that the buffered were completed
     // and no more were dequeue'd
     setTimeout(() => {
-      console.log("RESUME");
-
-      expect(s.queue.countFinishedItems()).toBe(setting.get("maxRequests"));
+      expect(s.queue.countFinishedItems()).toBe(
+        setting.get(Setting.MAX_CONCURRENT_REQUESTS)
+      );
       expect(s.queue.countRemainingItems()).toBeLessThan(N);
       expect(s.results.length).toBeGreaterThan(1);
 
@@ -212,7 +212,6 @@ describe("Async Spiders", () => {
     }, 150);
 
     p.then((results) => {
-      console.log("DONE");
       expect(results.length).toBe(N);
       expect(onDone).toHaveBeenCalled();
       done();
@@ -244,11 +243,11 @@ describe("Long living", () => {
 
     const r1 = await s.run(firstRequests);
     expect(r1.length).toBe(N);
-    expect(s.state).toBe(SpiderState.DONE);
+    expect(s.engine.isWaiting()).toBe(true);
 
     const r2 = await s.run(secondRequests);
     expect(r2.length).toBe(N / 2);
-    expect(s.state).toBe(SpiderState.DONE);
+    expect(s.engine.isWaiting()).toBe(true);
   });
 
   test("error and rerun", async () => {

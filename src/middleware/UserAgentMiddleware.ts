@@ -18,13 +18,10 @@ class UserAgentMiddleware extends Middleware {
   strategy: string;
   agentList: string[];
   index: number = 0;
+  stickyCache: { [key: string]: string } = {};
 
   constructor(strategy: string = "random", agentList?: string[]) {
     super();
-
-    if (!global.HUNTSMAN_SETTINGS.UA_STICKY_CACHE) {
-      global.HUNTSMAN_SETTINGS.UA_STICKY_CACHE = {};
-    }
 
     this.strategy = strategy;
     if (agentList) {
@@ -40,12 +37,11 @@ class UserAgentMiddleware extends Middleware {
 
   pick(r: Request): string {
     if (this.strategy === "sticky") {
-      const cache = global.HUNTSMAN_SETTINGS.UA_STICKY_CACHE;
-      if (cache[r.url]) {
-        return cache[r.url];
+      if (this.stickyCache[r.url]) {
+        return this.stickyCache[r.url];
       } else {
         const ua = this.randomPick();
-        cache[r.url] = ua;
+        this.stickyCache[r.url] = ua;
 
         return ua;
       }

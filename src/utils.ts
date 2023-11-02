@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { Spider, SpiderEvents, SpiderState } from "./Spider";
+import { Spider, SpiderEvents } from "./Spider";
 import { Response } from "./Response";
 import { QueueItem, Queue } from "./Queue";
 import { Settings } from "./Settings";
@@ -54,8 +54,6 @@ const cache = (
 
   return {
     async run(): Promise<Response[]> {
-      spider.state = SpiderState.DONE;
-
       for (let i = 0; i < data.queue.length; ++i) {
         const item = data.queue[i];
         if (item.request.response && !item.request.response.data) {
@@ -80,8 +78,4 @@ const cache = (
   };
 };
 
-function asyncTimeout(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export { cache, asyncTimeout };
+export { cache };

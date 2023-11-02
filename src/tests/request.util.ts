@@ -1,4 +1,5 @@
 import { Request } from "../Request";
+import mockAxios from "jest-mock-axios";
 
 const simulateRequest = (
   n: number,
@@ -9,18 +10,20 @@ const simulateRequest = (
   const timeout = delay === -1 ? (Math.random() * 100) | 0 : delay;
   const r = new Request(`n:${n}`);
 
-  const oldRun = r.run;
+  const prevRun = r.run;
+  r.run = () => {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        const p = prevRun.call(r);
+        if (passes) {
+          mockAxios.mockResponse(response);
+        } else {
+          mockAxios.mockError({ response });
+        }
 
-  r.run = function () {
-    require("axios").__setMockedRepsonse(
-      new Promise((resolve, reject) => {
-        setTimeout(() => {
-          if (passes) resolve(response);
-          else reject({ response });
-        }, timeout);
-      })
-    );
-    return oldRun.call(r);
+        p.then(resolve).catch(reject);
+      }, timeout);
+    });
   };
 
   return r;

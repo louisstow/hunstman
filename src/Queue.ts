@@ -17,6 +17,18 @@ class QueueItem {
     this.index = index;
     this.state = QueueItemState.READY;
   }
+
+  setFinished() {
+    this.state = QueueItemState.FINISHED;
+  }
+
+  setReady() {
+    this.state = QueueItemState.READY;
+  }
+
+  setInUse() {
+    this.state = QueueItemState.IN_USE;
+  }
 }
 
 class Queue {
@@ -61,12 +73,6 @@ class Queue {
     return b;
   }
 
-  clearFinished() {
-    this.queue = this.queue.filter(
-      (item) => item.state !== QueueItemState.FINISHED
-    );
-  }
-
   size(): number {
     return this.queue.length;
   }
@@ -88,6 +94,22 @@ class Queue {
 
   forEach(fn: (value: QueueItem, index: number) => void) {
     this.queue.forEach(fn);
+  }
+
+  quickDebug() {
+    return this.queue
+      .map((item) => {
+        if (item.state === QueueItemState.FINISHED) {
+          return "finished";
+        } else if (item.state === QueueItemState.IN_USE) {
+          return "in use";
+        } else if (item.state === QueueItemState.READY) {
+          return "ready";
+        } else {
+          return "unknown";
+        }
+      })
+      .join(", ");
   }
 
   getDebugState() {
