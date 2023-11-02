@@ -138,3 +138,27 @@ describe("Middleware", () => {
     });
   });
 });
+
+describe("Default middleware", () => {
+  test("Set default middleware", async () => {
+    const testMiddleware = new Middleware();
+
+    let processed = false;
+    testMiddleware.processRequest = jest.fn().mockImplementation((r) => {
+      processed = true;
+      return Promise.resolve(r);
+    });
+
+    Spider.setDefaultMiddleware([testMiddleware]);
+
+    const s = new Spider("defaultMiddleware");
+    expect(s.middleware.length).toBe(1);
+
+    const r = simulateRequest(0, {}, 0);
+    await s.run(r);
+
+    expect(processed).toBe(true);
+
+    Spider.setDefaultMiddleware([]);
+  });
+});

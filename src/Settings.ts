@@ -9,6 +9,7 @@ enum Setting {
   PROXY = "proxy",
   MIDDLEWARE = "middleware",
   LOGGER = "logger",
+  CACHE_PATH = "cachePath",
 }
 
 type KnownSettings = Partial<{
@@ -17,6 +18,7 @@ type KnownSettings = Partial<{
   [Setting.PROXY]: string;
   [Setting.MIDDLEWARE]: Middleware[];
   [Setting.LOGGER]: Logger;
+  [Setting.CACHE_PATH]: string;
 }>;
 
 type SpiderSettings = KnownSettings & { [k: string]: any };

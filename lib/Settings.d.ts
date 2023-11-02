@@ -5,7 +5,8 @@ declare enum Setting {
     TIMEOUT = "timeout",
     PROXY = "proxy",
     MIDDLEWARE = "middleware",
-    LOGGER = "logger"
+    LOGGER = "logger",
+    CACHE_PATH = "cachePath"
 }
 type KnownSettings = Partial<{
     [Setting.MAX_CONCURRENT_REQUESTS]: number;
@@ -13,6 +14,7 @@ type KnownSettings = Partial<{
     [Setting.PROXY]: string;
     [Setting.MIDDLEWARE]: Middleware[];
     [Setting.LOGGER]: Logger;
+    [Setting.CACHE_PATH]: string;
 }>;
 type SpiderSettings = KnownSettings & {
     [k: string]: any;

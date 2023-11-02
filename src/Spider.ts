@@ -68,7 +68,7 @@ class Spider {
       this.setQueue(queue);
     }
 
-    this.middleware = [];
+    this.middleware = [...Spider._defaultMiddleware];
     this.results = [];
     this.handlers = {};
     this.history = [];
@@ -358,6 +358,16 @@ class Spider {
     this.stats.endSpiderTime = Date.now();
 
     return this.results;
+  }
+
+  static _defaultMiddleware: Middleware[] = [];
+
+  static setDefaultMiddleware(middleware: Middleware[]) {
+    Spider._defaultMiddleware = middleware;
+  }
+
+  static clearDefaultMiddleware() {
+    Spider._defaultMiddleware = [];
   }
 }
 

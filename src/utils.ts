@@ -4,11 +4,13 @@ import path from "path";
 import { Spider, SpiderEvents } from "./Spider";
 import { Response } from "./Response";
 import { QueueItem, Queue } from "./Queue";
-import { Settings } from "./Settings";
+import { Setting, Settings } from "./Settings";
+
+const DEFAULT_CACHE_PATH = "__fixtures__";
 
 const loadCache = (key: string, settings: Settings): Queue | null => {
   try {
-    const cachePath = settings.get("cachePath", "");
+    const cachePath = settings.get(Setting.CACHE_PATH, DEFAULT_CACHE_PATH);
     const data = JSON.parse(
       fs.readFileSync(path.join(cachePath, `.${key}.cache`)).toString()
     );
@@ -22,7 +24,7 @@ const loadCache = (key: string, settings: Settings): Queue | null => {
 };
 
 const saveCache = (key: string, queue: Queue, settings: Settings) => {
-  const cachePath = settings.get("cachePath", "");
+  const cachePath = settings.get(Setting.CACHE_PATH, DEFAULT_CACHE_PATH);
 
   try {
     const d = JSON.stringify(queue.serialize());
