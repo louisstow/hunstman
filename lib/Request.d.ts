@@ -10,7 +10,7 @@ declare enum RequestState {
     FAILED = 4,
     SKIPPED = 5
 }
-declare type Method = "GET" | "POST";
+type Method = "GET" | "POST";
 declare class Request extends EventEmitter {
     url: string;
     method: Method;

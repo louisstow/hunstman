@@ -3,14 +3,9 @@ import { Request } from "./Request";
 import { Settings } from "./Settings";
 import type { Response } from "./Response";
 import { Middleware } from "./Middleware";
-import { Log, Logger } from "./Log";
-declare enum SpiderState {
-    IDLE = 0,
-    CRAWLING = 1,
-    CANCELLED = 2,
-    PAUSED = 3,
-    DONE = 4
-}
+import { HandlerError } from "./Error";
+import { Logger } from "./Log";
+import { Engine } from "./Engine";
 declare enum SpiderEvents {
     DONE = "done",
     SKIP = "skip",
@@ -18,21 +13,20 @@ declare enum SpiderEvents {
     ERROR = "fail",
     REQUEST_DONE = "requestDone"
 }
-declare type Requestable = Queue | Request | Array<Request>;
-declare type CallbackFunction = (...args: any[]) => Promise<void>;
+type Requestable = Queue | Request | Array<Request>;
+type CallbackFunction = (...args: any[]) => Promise<void>;
 declare class Spider {
     name: string;
     queue: Queue;
-    state: SpiderState;
+    engine: Engine;
     middleware: Array<Middleware>;
     settings: Settings;
-    logger: Log;
+    logger: Logger;
     results: Array<Response>;
     handlers: {
         [k: string]: CallbackFunction[];
     };
-    numCompletions: number;
-    numTries: number;
+    handlerErrors: HandlerError[];
     history: string[];
     stats: {
         numSuccessfulRequests: number;
@@ -53,7 +47,7 @@ declare class Spider {
     reset(): void;
     purge(): void;
     pushHistory(msg: string): void;
-    executeResponseHandler(f: CallbackFunction, response: Response, item: QueueItem): Promise<void>;
+    executeResponseHandler(fn: CallbackFunction, response: Response, item: QueueItem): Promise<void>;
     emitResponse(response: Response, item: QueueItem): Promise<void>;
     emit(event: SpiderEvents, ...args: any): Promise<void>;
     on(event: SpiderEvents, cb: CallbackFunction): void;
@@ -62,12 +56,9 @@ declare class Spider {
     private applySettingsToQueueRequests;
     private skipQueueItem;
     private handleSpiderFinished;
-    private checkSpiderFinished;
-    private crawlNextItems;
     private runRequestMiddleware;
     private runResponseMiddleware;
     private runQueueItem;
-    crawl(): Promise<void>;
     run(queue?: Requestable): Promise<Response[]>;
 }
-export { Spider, SpiderEvents, SpiderState };
+export { Spider, SpiderEvents };

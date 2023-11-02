@@ -1,19 +1,29 @@
-declare type SettingsKeyVal = {
+import type { Middleware } from "Middleware";
+import type { Logger } from "Log";
+declare enum Setting {
+    MAX_CONCURRENT_REQUESTS = "maxConcurrentRequests",
+    TIMEOUT = "timeout",
+    PROXY = "proxy",
+    MIDDLEWARE = "middleware",
+    LOGGER = "logger"
+}
+type KnownSettings = Partial<{
+    [Setting.MAX_CONCURRENT_REQUESTS]: number;
+    [Setting.TIMEOUT]: number;
+    [Setting.PROXY]: string;
+    [Setting.MIDDLEWARE]: Middleware[];
+    [Setting.LOGGER]: Logger;
+}>;
+type SpiderSettings = KnownSettings & {
     [k: string]: any;
 };
-declare global {
-    namespace NodeJS {
-        interface Global {
-            HUNTSMAN_SETTINGS: SettingsKeyVal;
-        }
-    }
-}
+type SettingsKey = keyof KnownSettings;
 declare class Settings {
-    settings: SettingsKeyVal;
-    constructor();
+    settings: SpiderSettings;
+    constructor(settings?: SpiderSettings);
     loadConfig(configPath?: string): boolean;
-    get(setting: string, fallback?: any): any;
-    set(setting: string, value: any): void;
-    extend(settings: SettingsKeyVal): void;
+    get<T extends any>(setting: SettingsKey | string, fallback?: T): T;
+    set(setting: SettingsKey | string, value: any): void;
+    extend(settings: SpiderSettings): void;
 }
-export { Settings };
+export { Settings, SpiderSettings, Setting };

@@ -4,6 +4,9 @@ declare class UserAgentMiddleware extends Middleware {
     strategy: string;
     agentList: string[];
     index: number;
+    stickyCache: {
+        [key: string]: string;
+    };
     constructor(strategy?: string, agentList?: string[]);
     randomPick(): string;
     pick(r: Request): string;

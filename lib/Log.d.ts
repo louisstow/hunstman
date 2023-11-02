@@ -5,19 +5,17 @@ declare enum LogType {
     ERROR = 3
 }
 declare class Logger {
-    error(...args: any[]): void;
-    warn(...args: any[]): void;
-    info(...args: any[]): void;
-    debug(...args: any[]): void;
-}
-declare class Log {
     prefix: string;
-    logger: Logger;
-    constructor(prefix: string, logger?: Logger);
-    log(type: LogType, ...args: any[]): void;
-    info(...args: any[]): void;
-    warn(...args: any[]): void;
+    constructor(prefix: string);
     error(...args: any[]): void;
+    warn(...args: any[]): void;
+    info(...args: any[]): void;
     debug(...args: any[]): void;
 }
-export { Log, Logger, LogType };
+declare class ConsoleLogger extends Logger {
+    error(...args: any[]): void;
+    warn(...args: any[]): void;
+    info(...args: any[]): void;
+    debug(...args: any[]): void;
+}
+export { ConsoleLogger, Logger, LogType };

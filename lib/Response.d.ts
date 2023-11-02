@@ -1,5 +1,5 @@
 import type { Request } from "./Request";
-declare type Header = {
+type Header = {
     [h: string]: string;
 };
 declare class Response<T = any> {
