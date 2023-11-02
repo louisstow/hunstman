@@ -51,6 +51,8 @@ class Spider {
     this.queue = Queue.empty();
     this.settings = settings || new Settings();
 
+    this.settings.extend(Spider._defaultSettings);
+
     this.logger =
       logger ||
       this.settings.get<Logger>("logger", undefined) ||
@@ -361,6 +363,7 @@ class Spider {
   }
 
   static _defaultMiddleware: Middleware[] = [];
+  static _defaultSettings: Settings = new Settings();
 
   static setDefaultMiddleware(middleware: Middleware[]) {
     Spider._defaultMiddleware = middleware;
@@ -368,6 +371,10 @@ class Spider {
 
   static clearDefaultMiddleware() {
     Spider._defaultMiddleware = [];
+  }
+
+  static setDefaultSetting(key: string, value: any) {
+    Spider._defaultSettings.set(key, value);
   }
 }
 

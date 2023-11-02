@@ -72,7 +72,16 @@ class Engine {
   }
 
   cancel() {
+    if (!this.isRunning() && !this.isPaused()) {
+      return false;
+    }
+
+    if (this.isPaused()) {
+      this.resume();
+    }
+
     this.state = EngineState.CANCELLED;
+    return true;
   }
 
   isRunning() {
@@ -98,7 +107,6 @@ class Engine {
   async run() {
     this.state = EngineState.RUNNING;
     await this.execute();
-    this.state = EngineState.WAITING;
   }
 
   async executeFromItem(item: QueueItem, localIndex: number) {
@@ -139,6 +147,10 @@ class Engine {
       const items = this.queue.buffer(this.maxConcurrentRequests - inUse);
 
       await Promise.all(items.map((item, i) => this.executeFromItem(item, i)));
+    }
+
+    if (this.state !== EngineState.CANCELLED) {
+      this.state = EngineState.WAITING;
     }
   }
 }

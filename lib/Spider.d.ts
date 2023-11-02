@@ -61,7 +61,9 @@ declare class Spider {
     private runQueueItem;
     run(queue?: Requestable): Promise<Response[]>;
     static _defaultMiddleware: Middleware[];
+    static _defaultSettings: Settings;
     static setDefaultMiddleware(middleware: Middleware[]): void;
     static clearDefaultMiddleware(): void;
+    static setDefaultSetting(key: string, value: any): void;
 }
 export { Spider, SpiderEvents };

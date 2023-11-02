@@ -26,6 +26,6 @@ declare class Settings {
     loadConfig(configPath?: string): boolean;
     get<T extends any>(setting: SettingsKey | string, fallback?: T): T;
     set(setting: SettingsKey | string, value: any): void;
-    extend(settings: SpiderSettings): void;
+    extend(settings: SpiderSettings | Settings): void;
 }
 export { Settings, SpiderSettings, Setting };

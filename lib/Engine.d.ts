@@ -23,7 +23,7 @@ declare class Engine {
     reset(): void;
     pause(): boolean;
     resume(): boolean;
-    cancel(): void;
+    cancel(): boolean;
     isRunning(): boolean;
     isWaiting(): boolean;
     isPaused(): boolean;

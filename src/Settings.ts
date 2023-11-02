@@ -60,7 +60,11 @@ class Settings {
     this.settings[setting] = value;
   }
 
-  extend(settings: SpiderSettings) {
+  extend(settings: SpiderSettings | Settings) {
+    if (settings instanceof Settings) {
+      settings = settings.settings;
+    }
+
     for (const key in settings) {
       this.set(key, settings[key]);
     }

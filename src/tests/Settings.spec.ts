@@ -1,4 +1,5 @@
 import { Settings } from "../Settings";
+import { Spider } from "../Spider";
 
 jest.mock("fs");
 
@@ -23,5 +24,13 @@ describe("Settings", () => {
     s.loadConfig("myfile");
 
     expect(s.get("LOCALFILE")).toBe(99);
+  });
+});
+
+describe("Default settings", () => {
+  test("Default settings are inherited", () => {
+    Spider.setDefaultSetting("DEFAULT", "set");
+    const s = new Spider("test");
+    expect(s.settings.get("DEFAULT")).toBe("set");
   });
 });
