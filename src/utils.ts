@@ -69,7 +69,7 @@ const cache = (
           spider.results[item.index] = item.request.response;
         }
 
-        spider.emit(SpiderEvents.RESPONSE, item.request.response, item);
+        await spider.emit(SpiderEvents.RESPONSE, item.request.response, item);
         spider.emit(SpiderEvents.REQUEST_DONE, item);
       }
 
