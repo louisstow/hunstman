@@ -6,7 +6,7 @@ import axios, {
   AxiosHeaders,
 } from "axios";
 
-import ProxyAgent from "proxy-agent";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import { EventEmitter } from "events";
 
 import { Response } from "./Response";
@@ -134,7 +134,7 @@ class Request extends EventEmitter {
   }
 
   private createAxiosProps(): AxiosRequestConfig {
-    const httpAgent = this.proxy ? new ProxyAgent(this.proxy) : undefined;
+    const agent = this.proxy ? new HttpsProxyAgent(this.proxy) : undefined;
 
     return {
       url: this.url,
@@ -145,8 +145,8 @@ class Request extends EventEmitter {
       transformResponse: [nop],
       cancelToken: this.cancelToken.token,
       timeout: this.timeout,
-      httpsAgent: httpAgent,
-      httpAgent: httpAgent,
+      httpAgent: agent,
+      httpsAgent: agent,
     };
   }
 

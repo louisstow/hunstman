@@ -1,7 +1,9 @@
 import { Spider, SpiderEvents } from "../Spider";
 import { simulateRequest } from "./request.util";
+import { Request } from "../Request";
 
 import { cache } from "../utils";
+import { Setting } from "../Settings";
 
 describe("Cache", () => {
   test("Can run through a cache", async () => {
